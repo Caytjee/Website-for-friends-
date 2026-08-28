@@ -1,0 +1,5 @@
+.env
+database.db
+__pycache__/
+static/uploads/
+static/video/*.mp4

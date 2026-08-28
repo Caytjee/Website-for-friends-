@@ -1,0 +1,17 @@
+.git
+.gitignore
+__pycache__
+**/__pycache__
+*.py[cod]
+*.egg-info
+.venv
+venv
+env
+.env
+.env.*
+.cursor
+.vscode
+*.md
+static/video/*.mp4
+static/uploads/**
+!static/uploads/.gitkeep
