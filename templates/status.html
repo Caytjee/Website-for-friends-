@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .status-page { text-align: left; }
+
+    .status-hero {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px;
+        background: var(--bg-box);
+        background: linear-gradient(135deg, var(--bg-box) 0%, color-mix(in srgb, var(--accent) 12%, var(--bg-box)) 100%);
+        border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: var(--radius); padding: 22px 24px;
+        box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+        margin-bottom: 18px; position: relative; overflow: hidden;
+    }
+    .status-hero::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(120deg, transparent 40%, color-mix(in srgb, var(--accent) 10%, transparent) 50%, transparent 60%);
+        animation: statusSweep 5s ease-in-out infinite;
+    }
+    @keyframes statusSweep { 0%, 100% { transform: translateX(-30%); opacity: 0.4; } 50% { transform: translateX(30%); opacity: 1; } }
+
+    .status-hero h1 { margin: 0; font-size: 2em; color: var(--accent); text-shadow: 0 0 12px var(--accent); }
+    .status-sub { margin: 6px 0 0 0; opacity: 0.75; font-size: 0.95em; }
+
+    .hero-metrics { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; z-index: 1; }
+    .hero-chip {
+        background: var(--input-bg); border: 1px solid var(--accent);
+        border-radius: 999px; padding: 8px 14px; font-family: 'Courier New', Courier, monospace;
+        font-weight: bold; font-size: 0.92em; display: flex; align-items: center; gap: 8px;
+    }
+
+    .vote-badge {
+        display: inline-flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: 0.08em;
+        padding: 10px 16px; border-radius: 999px; font-size: 0.95em; text-transform: uppercase;
+    }
+    .vote-badge.open { color: #3fb950; background: rgba(63,185,80,0.12); border: 1px solid #3fb950; box-shadow: 0 0 16px rgba(63,185,80,0.25); }
+    .vote-badge.locked { color: #ff6b6b; background: rgba(255,76,76,0.12); border: 1px solid #ff4c4c; box-shadow: 0 0 16px rgba(255,76,76,0.25); }
+
+    .pulse { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #3fb950; box-shadow: 0 0 12px #3fb950; animation: pulse-anim 1.5s infinite; }
+    .pulse.red { background: #ff4c4c; box-shadow: 0 0 12px #ff4c4c; }
+    @keyframes pulse-anim { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.25); } 100% { opacity: 1; transform: scale(1); } }
+
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+    .status-card {
+        background: var(--bg-box); padding: 18px; border-radius: var(--radius); border: var(--border);
+        position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.3); min-height: 118px;
+    }
+    .status-card.wide { grid-column: 1 / -1; }
+
+    .card-label { font-size: 0.78em; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); font-weight: 800; opacity: 0.9; }
+    .metric { font-size: 1.7em; font-weight: 800; color: var(--text-main); margin-top: 10px; font-family: 'Courier New', Courier, monospace; line-height: 1.15; }
+    .metric.small { font-size: 1.15em; }
+    .hint { margin-top: 8px; opacity: 0.65; font-size: 0.85em; }
+
+    .status-card.clock-card { padding: 22px 24px; }
+    .clock-face { margin-top: 12px; }
+    .clock-date {
+        font-size: 0.92em; font-weight: 600; opacity: 0.72; letter-spacing: 0.04em;
+        margin-bottom: 6px; white-space: nowrap;
+    }
+    .clock-time {
+        font-size: 1.7em; font-weight: 800; color: var(--text-main);
+        font-family: 'Courier New', Courier, monospace;
+        line-height: 1.1; letter-spacing: 0.04em; white-space: nowrap;
+    }
+    .clock-ampm {
+        font-size: 0.55em; letter-spacing: 0.12em; font-weight: 800;
+        opacity: 0.75; margin-left: 0.35em; vertical-align: 0.18em;
+    }
+
+    .stat-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; }
+    .stat-row .metric { margin-top: 2px; font-size: 1.35em; }
+    .stat-k { opacity: 0.6; font-size: 0.75em; letter-spacing: 0.08em; text-transform: uppercase; font-weight: bold; }
+
+    .radar-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+    .radar-cell { text-align: center; padding: 10px 6px; border-radius: 10px; background: var(--input-bg); }
+    .radar-cell .metric { margin-top: 4px; font-size: 1.45em; }
+    .radar-yes { color: #4CAF50; border: 1px solid rgba(76,175,80,0.35); }
+    .radar-maybe { color: #FFC107; border: 1px solid rgba(255,193,7,0.35); }
+    .radar-no { color: #F44336; border: 1px solid rgba(244,67,54,0.35); }
+
+    .flash { animation: numFlash 0.55s ease; }
+    @keyframes numFlash {
+        0% { color: #fff; text-shadow: 0 0 14px var(--accent); }
+        100% { text-shadow: none; }
+    }
+
+    .live-log {
+        background: #050505; color: #9ae6b4; font-family: 'Courier New', Courier, monospace;
+        padding: 16px 18px; border-radius: 10px; margin-top: 18px; border: 1px solid #2a3d2a;
+        height: 210px; overflow-y: auto; box-shadow: inset 0 0 18px rgba(0,255,0,0.08);
+        font-size: 0.88em; line-height: 1.55;
+    }
+    .live-log .log-line { white-space: pre-wrap; word-break: break-word; }
+    .live-log .log-line.new { animation: logIn 0.35s ease; }
+    @keyframes logIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+    .log-head { display: flex; justify-content: space-between; align-items: baseline; margin-top: 22px; }
+    .log-head h2 { margin: 0; font-size: 1.05em; }
+    .log-head span { opacity: 0.55; font-size: 0.85em; }
+</style>
+
+<div class="status-page">
+    <div class="status-hero">
+        <div style="z-index: 1;">
+            <h1>🛠️ <span data-i18n="status.title">{{ t('status.title') }}</span></h1>
+            <p class="status-sub"><span data-i18n="status.sub">{{ t('status.sub') }}</span> <strong id="next-sat">{{ next_sat }}</strong></p>
+        </div>
+        <div class="hero-metrics">
+            <span id="vote-badge" class="vote-badge {% if voting_locked %}locked{% else %}open{% endif %}">
+                <span id="vote-pulse" class="pulse {% if voting_locked %}red{% endif %}"></span>
+                <span id="vote-label">{% if voting_locked %}<span data-i18n="status.votingLocked">{{ t('status.votingLocked') }}</span>{% else %}<span data-i18n="status.votingOpen">{{ t('status.votingOpen') }}</span>{% endif %}</span>
+            </span>
+            <span class="hero-chip"><span data-i18n="status.ping">{{ t('status.ping') }}</span> <span id="ping-metric">—</span></span>
+            <span class="hero-chip"><span data-i18n="status.up">{{ t('status.up') }}</span> <span id="uptime-metric">{{ uptime_seconds }}s</span></span>
+        </div>
+    </div>
+
+    <div class="status-grid">
+        <div class="status-card">
+            <div class="card-label" data-i18n="status.nextSession">{{ t('status.nextSession') }}</div>
+            <div class="metric small" id="session-date">{{ next_sat }}</div>
+            <div class="hint" data-i18n="status.sessionHint">{{ t('status.sessionHint') }}</div>
+        </div>
+
+        <div class="status-card">
+            <div class="card-label" data-i18n="status.gotw">{{ t('status.gotw') }}</div>
+            <div class="metric small" id="winner-metric">{{ winner }}</div>
+            <div class="hint" data-i18n="status.gotwHint">{{ t('status.gotwHint') }}</div>
+        </div>
+
+        <div class="status-card">
+            <div class="card-label" data-i18n="status.watchout">{{ t('status.watchout') }}</div>
+            <div class="metric"><span id="beacons-metric">{{ active_beacons }}</span></div>
+            <div class="hint" data-i18n="status.beaconsHint">{{ t('status.beaconsHint') }}</div>
+        </div>
+
+        <div class="status-card wide">
+            <div class="card-label"><span data-i18n="status.radar">{{ t('status.radar') }}</span> · <span id="radar-sat">{{ next_sat }}</span></div>
+            <div class="radar-mini">
+                <div class="radar-cell radar-yes">
+                    <div class="stat-k" data-i18n="common.in">{{ t('common.in') }}</div>
+                    <div class="metric" id="radar-yes">{{ radar.yes }}</div>
+                </div>
+                <div class="radar-cell radar-maybe">
+                    <div class="stat-k" data-i18n="events.maybeLabel">{{ t('events.maybeLabel') }}</div>
+                    <div class="metric" id="radar-maybe">{{ radar.maybe }}</div>
+                </div>
+                <div class="radar-cell radar-no">
+                    <div class="stat-k" data-i18n="common.out">{{ t('common.out') }}</div>
+                    <div class="metric" id="radar-no">{{ radar.no }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-card wide">
+            <div class="card-label" data-i18n="status.database">{{ t('status.database') }}</div>
+            <div class="stat-row">
+                <div>
+                    <div class="stat-k" data-i18n="status.users">{{ t('status.users') }}</div>
+                    <div class="metric" id="users-metric">{{ users_count }}</div>
+                </div>
+                <div>
+                    <div class="stat-k" data-i18n="status.votes">{{ t('status.votes') }}</div>
+                    <div class="metric" id="votes-metric">{{ votes_count }}</div>
+                </div>
+                <div>
+                    <div class="stat-k" data-i18n="status.games">{{ t('status.games') }}</div>
+                    <div class="metric" id="games-metric">{{ games_count }}</div>
+                </div>
+            </div>
+            <div class="hint" data-i18n="status.dbHint">{{ t('status.dbHint') }}</div>
+        </div>
+
+        <div class="status-card">
+            <div class="card-label" data-i18n="status.codebase">{{ t('status.codebase') }}</div>
+            <div class="metric" id="loc-metric">{{ total_loc }}</div>
+            <div class="hint" data-i18n="status.locHint">{{ t('status.locHint') }}</div>
+        </div>
+
+        <div class="status-card clock-card">
+            <div class="card-label" data-i18n="status.clock">{{ t('status.clock') }}</div>
+            <div class="clock-face" id="clock-metric">
+                <div class="clock-date" id="clock-date"></div>
+                <div class="clock-time" id="clock-time"></div>
+            </div>
+            <div class="hint" data-i18n="status.clockHint">{{ t('status.clockHint') }}</div>
+        </div>
+    </div>
+
+    <div class="log-head">
+        <h2>📟 <span data-i18n="status.liveFeed">{{ t('status.liveFeed') }}</span></h2>
+        <span data-i18n="status.pollHint">{{ t('status.pollHint') }}</span>
+    </div>
+    <div class="live-log" id="term-output"></div>
+</div>
+
+<script id="status-boot" type="application/json">{{ status_json | tojson }}</script>
+<script>
+(function () {
+    const POLL_MS = 5000;
+    const bootEl = document.getElementById('status-boot');
+    let prev = JSON.parse(bootEl.textContent);
+    const term = document.getElementById('term-output');
+
+    function formatUptime(sec) {
+        sec = Math.max(0, Math.floor(Number(sec) || 0));
+        const d = Math.floor(sec / 86400);
+        const h = Math.floor((sec % 86400) / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        if (d > 0) return d + 'd ' + h + 'h ' + m + 'm';
+        if (h > 0) return h + 'h ' + m + 'm';
+        if (m > 0) return m + 'm ' + s + 's';
+        return s + 's';
+    }
+
+    function setText(id, value, flash) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const next = String(value);
+        if (el.textContent === next) return;
+        el.textContent = next;
+        if (flash) {
+            el.classList.remove('flash');
+            void el.offsetWidth;
+            el.classList.add('flash');
+        }
+    }
+
+    function logLine(msg) {
+        const line = document.createElement('div');
+        line.className = 'log-line new';
+        line.textContent = msg;
+        term.appendChild(line);
+        while (term.children.length > 60) term.removeChild(term.firstChild);
+        term.scrollTop = term.scrollHeight;
+    }
+
+    function stamp(iso) {
+        if (!iso) return '';
+        const t = String(iso);
+        return t.indexOf('T') >= 0 ? t.split('T')[1].slice(0, 8) : t;
+    }
+
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function formatServerClock(iso) {
+        const t = String(iso || '');
+        const m = t.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+        if (!m) {
+            const i = t.indexOf('T');
+            return i >= 0
+                ? { date: t.slice(0, i), time: t.slice(i + 1, i + 9), ampm: '' }
+                : { date: t || '—', time: '—', ampm: '' };
+        }
+        const day = String(parseInt(m[3], 10));
+        const mon = MONTHS[parseInt(m[2], 10) - 1] || m[2];
+        let hour = parseInt(m[4], 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12;
+        if (hour === 0) hour = 12;
+        return {
+            date: mon + ' ' + day + ', ' + m[1],
+            time: hour + ':' + m[5] + ':' + m[6],
+            ampm: ampm
+        };
+    }
+
+    function paintClock(iso) {
+        const parts = formatServerClock(iso);
+        setText('clock-date', parts.date, false);
+        const timeEl = document.getElementById('clock-time');
+        if (!timeEl) return;
+        timeEl.textContent = '';
+        timeEl.appendChild(document.createTextNode(parts.time));
+        if (parts.ampm) {
+            const ampmEl = document.createElement('span');
+            ampmEl.className = 'clock-ampm';
+            ampmEl.textContent = parts.ampm;
+            timeEl.appendChild(ampmEl);
+        }
+    }
+
+    function applyVoting(locked) {
+        const badge = document.getElementById('vote-badge');
+        const pulse = document.getElementById('vote-pulse');
+        const label = document.getElementById('vote-label');
+        if (!badge || !pulse || !label) return;
+        badge.classList.toggle('open', !locked);
+        badge.classList.toggle('locked', locked);
+        pulse.classList.toggle('red', locked);
+        label.innerHTML = locked
+            ? '<span data-i18n="status.votingLocked">' + ((window.OTI18n && OTI18n.t('status.votingLocked')) || 'Voting LOCKED') + '</span>'
+            : '<span data-i18n="status.votingOpen">' + ((window.OTI18n && OTI18n.t('status.votingOpen')) || 'Voting OPEN') + '</span>';
+    }
+
+    function paint(data, flash) {
+        applyVoting(!!data.voting_locked);
+        setText('next-sat', data.next_sat, flash);
+        setText('session-date', data.next_sat, flash);
+        setText('radar-sat', data.next_sat, flash);
+        setText('winner-metric', data.winner, flash);
+        setText('beacons-metric', data.active_beacons, flash);
+        setText('radar-yes', (data.radar && data.radar.yes) || 0, flash);
+        setText('radar-maybe', (data.radar && data.radar.maybe) || 0, flash);
+        setText('radar-no', (data.radar && data.radar.no) || 0, flash);
+        setText('users-metric', data.users_count, flash);
+        setText('votes-metric', data.votes_count, flash);
+        setText('games-metric', data.games_count, flash);
+        setText('loc-metric', data.total_loc, flash);
+        paintClock(data.server_time);
+        setText('uptime-metric', formatUptime(data.uptime_seconds), false);
+    }
+
+    function diffs(oldD, newD) {
+        const t = stamp(newD.server_time);
+        const events = [];
+        const push = (label, a, b) => {
+            if (a !== b) events.push('> ' + t + '  ' + label + ' ' + a + ' → ' + b);
+        };
+        push('users', oldD.users_count, newD.users_count);
+        push('votes', oldD.votes_count, newD.votes_count);
+        push('games', oldD.games_count, newD.games_count);
+        push('winner', oldD.winner, newD.winner);
+        push('watchout', oldD.active_beacons, newD.active_beacons);
+        push('radar IN', (oldD.radar && oldD.radar.yes) || 0, (newD.radar && newD.radar.yes) || 0);
+        push('radar MAYBE', (oldD.radar && oldD.radar.maybe) || 0, (newD.radar && newD.radar.maybe) || 0);
+        push('radar OUT', (oldD.radar && oldD.radar.no) || 0, (newD.radar && newD.radar.no) || 0);
+        const oldLock = oldD.voting_locked ? 'LOCKED' : 'OPEN';
+        const newLock = newD.voting_locked ? 'LOCKED' : 'OPEN';
+        push('voting', oldLock, newLock);
+        return events;
+    }
+
+    paint(prev, false);
+    logLine('> Live feed armed · ' + prev.server_time);
+    logLine('> Snapshot · voting ' + (prev.voting_locked ? 'LOCKED' : 'OPEN') + ' · ' + prev.users_count + ' users · ' + prev.votes_count + ' votes · radar ' + ((prev.radar && prev.radar.yes) || 0) + '/' + ((prev.radar && prev.radar.maybe) || 0) + '/' + ((prev.radar && prev.radar.no) || 0));
+
+    async function poll() {
+        const t0 = performance.now();
+        try {
+            const res = await fetch('/api/status', { credentials: 'same-origin', cache: 'no-store' });
+            const pingMs = Math.round(performance.now() - t0);
+            setText('ping-metric', pingMs + 'ms', true);
+            if (res.status === 401) {
+                logLine('> session expired — reload to log in');
+                return;
+            }
+            if (!res.ok) {
+                logLine('> ' + stamp(new Date().toISOString()) + '  api ' + res.status);
+                return;
+            }
+            const data = await res.json();
+            diffs(prev, data).forEach(logLine);
+            paint(data, true);
+            prev = data;
+        } catch (err) {
+            setText('ping-metric', 'offline', true);
+            logLine('> poll failed · ' + (err && err.message ? err.message : 'network'));
+        }
+    }
+
+    poll();
+    setInterval(poll, POLL_MS);
+})();
+</script>
+
+{% endblock %}

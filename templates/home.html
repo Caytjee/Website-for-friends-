@@ -1,0 +1,547 @@
+{% extends "base.html" %}
+{% block content %}
+{% set appid = game_appids.get(winner, 'non') %}
+{% set has_cover = appid != 'non' and winner != 'TBD (No votes yet)' %}
+
+<style>
+    .ot-stage { text-align: left; }
+    .ot-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: var(--accent); opacity: 0.85; margin: 0 0 6px;
+    }
+    .ot-ticker {
+        display: flex; align-items: stretch; overflow: hidden; margin: 0 0 14px; border-radius: 12px;
+        border: 1px solid color-mix(in srgb, #FFD700 35%, transparent);
+        background: linear-gradient(90deg, rgba(0,0,0,0.55), color-mix(in srgb, var(--bg-box) 80%, #000));
+    }
+    .ot-ticker-label {
+        flex-shrink: 0; display: flex; align-items: center;
+        background: #FFD700; color: #111; font-weight: 900; font-size: 0.72em;
+        letter-spacing: 0.14em; text-transform: uppercase; padding: 10px 12px;
+    }
+    .ot-ticker-mask { overflow: hidden; flex: 1; min-width: 0; }
+    .ot-ticker-track {
+        display: flex; align-items: center; gap: 28px; width: max-content;
+        animation: ot-marquee 24s linear infinite; padding: 8px 16px;
+    }
+    .ot-ticker-item {
+        display: flex; align-items: center; gap: 8px; white-space: nowrap; font-weight: 800;
+    }
+    .ot-ticker-item img {
+        width: 28px; height: 28px; border-radius: 50%; object-fit: cover;
+        border: 2px solid #FFD700; cursor: pointer;
+    }
+    .ot-gold { color: #FFD700; }
+    @keyframes ot-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    .ot-hero {
+        position: relative; overflow: hidden; border-radius: 18px; min-height: 420px;
+        border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+        box-shadow: 0 18px 50px rgba(0,0,0,0.45), 0 0 40px color-mix(in srgb, var(--accent) 12%, transparent);
+        margin-bottom: 18px;
+    }
+    .ot-hero-bg {
+        position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+        transform: translateZ(0);
+    }
+    .ot-hero-art {
+        position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+        transform: translate3d(0, 0, 0) scale(1.04);
+        transform-origin: center center;
+        will-change: transform;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        animation: ot-ken 30s ease-in-out infinite alternate;
+    }
+    .ot-hero-video {
+        z-index: 1; animation: none; transform: scale(1.02);
+        will-change: auto;
+    }
+    .ot-hero-poster { z-index: 0; }
+    .ot-hero-ambient {
+        position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2;
+        pointer-events: none; mix-blend-mode: screen; opacity: 0.42;
+    }
+    .ot-hero-veil {
+        position: absolute; inset: 0;
+        background:
+            linear-gradient(115deg, color-mix(in srgb, var(--bg-main) 88%, transparent) 0%, color-mix(in srgb, var(--bg-main) 35%, transparent) 52%, transparent 100%),
+            linear-gradient(180deg, transparent 40%, color-mix(in srgb, var(--bg-main) 92%, #000) 100%);
+    }
+    .ot-hero-scan {
+        position: absolute; left: 0; right: 0; height: 120px; pointer-events: none; opacity: 0.18;
+        background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 80%, transparent), transparent);
+        animation: ot-scan 5.5s linear infinite;
+    }
+    @keyframes ot-ken {
+        from { transform: translate3d(0, 0, 0) scale(1.04); }
+        to { transform: translate3d(0, 0, 0) scale(1.14); }
+    }
+    @keyframes ot-scan { from { top: -20%; } to { top: 110%; } }
+    .ot-hero-inner {
+        position: relative; z-index: 1; padding: 22px 22px 26px;
+        display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.15fr); gap: 22px; align-items: end;
+    }
+    .ot-ops {
+        display: flex; flex-direction: column; gap: 14px;
+    }
+    .ot-ops-top {
+        display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .ot-avatar {
+        width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
+        border: 2px solid var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .ot-title { margin: 0; font-size: clamp(1.6em, 4vw, 2.35em); letter-spacing: 0.04em; text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent); }
+    .ot-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .ot-actions button, .ot-actions a button { margin: 0; }
+    #daily-ore-btn {
+        background: linear-gradient(90deg, #00e5ff, #7c4dff); font-weight: 900;
+    }
+
+    .ot-brief {
+        background: color-mix(in srgb, var(--bg-box) 72%, transparent);
+        backdrop-filter: blur(10px);
+        border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+        border-radius: 16px; padding: 18px;
+    }
+    .ot-hud { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 14px; }
+    .ot-hud-cell {
+        flex: 1; min-width: 64px; text-align: center; padding: 10px 6px;
+        background: rgba(0,0,0,0.5); border-radius: 12px;
+        border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+        box-shadow: inset 0 0 18px color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+    .ot-hud-cell span {
+        display: block; font-size: clamp(1.35em, 4vw, 2.05em); font-weight: 900;
+        font-variant-numeric: tabular-nums; color: var(--accent);
+        text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);
+        line-height: 1.1;
+    }
+    .ot-hud-cell label {
+        display: block; margin-top: 4px; font-size: 0.62em; letter-spacing: 0.16em;
+        text-transform: uppercase; opacity: 0.7; font-weight: 800;
+    }
+    .ot-gotw {
+        display: flex; gap: 12px; align-items: center; margin-top: 8px;
+        background: rgba(0,0,0,0.35); border-radius: 12px; padding: 8px;
+        border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+    .ot-gotw img { width: 148px; max-width: 42%; border-radius: 8px; border: 1px solid var(--accent); display: block; }
+    .ot-gotw strong { color: var(--accent); font-size: 1.15em; }
+
+    .ot-split { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 16px; }
+    .ot-season, .ot-radar {
+        margin: 0; height: auto; text-align: left; position: relative; overflow: hidden;
+    }
+    .ot-radar .radar-cols { margin-top: 14px; }
+    .ot-radar .radar-col { min-height: 110px; }
+    .ot-radar .radar-col h3 { margin: 0 0 10px; font-size: 0.78em; letter-spacing: 0.14em; text-transform: uppercase; }
+    .ot-count { opacity: 0.75; font-weight: 800; }
+
+    .ot-distress {
+        margin: 16px 0 0; text-align: left;
+    }
+    .ot-distress.hot {
+        border-color: #ff4c4c;
+        box-shadow: 0 0 28px rgba(255,76,76,0.22);
+        animation: ot-siren 2.4s ease-in-out infinite;
+    }
+    @keyframes ot-siren {
+        0%, 100% { box-shadow: 0 0 12px rgba(255,76,76,0.12); }
+        50% { box-shadow: 0 0 28px rgba(255,76,76,0.32); }
+    }
+    .ot-distress-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+    .ot-distress .watchout-card { flex: 1; min-width: 230px; max-width: 360px; width: auto; }
+
+    .steam-remind-box {
+        width: 92%;
+        max-width: 420px;
+        margin: 0;
+        text-align: left;
+        padding: 24px 22px 20px;
+        border: 2px solid var(--accent);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 28px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+    .steam-remind-kicker {
+        margin: 0 0 8px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-size: 0.72em;
+        font-weight: 800;
+        color: var(--accent);
+    }
+    .steam-remind-box h3 { margin: 0 0 10px; color: var(--accent); font-size: 1.35em; }
+    .steam-remind-box p { margin: 0 0 18px; line-height: 1.5; color: var(--text-main); }
+    .steam-remind-actions { display: flex; gap: 10px; }
+    .steam-remind-actions button { flex: 1; width: auto; margin-top: 0; }
+
+    @media (max-width: 900px) {
+        .ot-hero-inner, .ot-split { grid-template-columns: 1fr; }
+        .ot-hero { min-height: 0; }
+        .ot-gotw { flex-direction: column; align-items: stretch; }
+        .ot-gotw img { width: 100%; max-width: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .ot-ticker-track, .ot-hero-art, .ot-hero-scan, .ot-radar-scan, .ot-distress.hot { animation: none; }
+        .ot-hero-ambient { display: none; }
+    }
+</style>
+
+<div class="ot-stage">
+    <div class="ot-ticker">
+        <div class="ot-ticker-label">Vault</div>
+        <div class="ot-ticker-mask">
+            <div class="ot-ticker-track">
+                {% if richest %}
+                    {% for _ in [1, 2] %}
+                        {% for p in richest %}
+                        <div class="ot-ticker-item">
+                            <span>{% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %}</span>
+                            <span class="player-card {{ border_wrap_class(p.active_border) }}" data-player-username="{{ p.username }}" data-player-steam="{{ p.steam_id or '' }}" data-active-border="{{ p.active_border or '' }}" data-default-border="2px solid #FFD700">
+                                <img src="{{ p.avatar }}" alt="" class="{{ border_img_class(p.active_border) }}" onclick='openPlayerCard({{ p.username | tojson }})'{% if border_wrap_class(p.active_border) %} style="border:none;"{% endif %}>
+                            </span>
+                            <strong onclick='openPlayerCard({{ p.username | tojson }})' style="cursor:pointer;">{{ p.username }}</strong>
+                            <span class="ot-gold">{{ p.ore_coins }} OC</span>
+                            <span class="muted">·</span>
+                        </div>
+                        {% endfor %}
+                    {% endfor %}
+                {% else %}
+                    <div class="ot-ticker-item muted" data-i18n="home.tickerEmpty">{{ t('home.tickerEmpty') }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="ot-hero">
+        <div class="ot-hero-bg">
+            {% if has_cover %}
+            <img class="ot-hero-art ot-hero-poster" id="ot-hero-poster" src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ appid }}/header.jpg" alt="{{ winner }}" data-appid="{{ appid }}" data-name="{{ winner }}" onerror="steamImgFallback(this)">
+            {% endif %}
+            {% if hero_video %}
+            {# Drop a muted loop at static/video/hero-repo.mp4 (R.E.P.O.) or static/video/hero.mp4. No copyrighted full gameplay. #}
+            <video class="ot-hero-art ot-hero-video" id="ot-hero-video" muted loop playsinline autoplay poster="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ appid }}/header.jpg">
+                <source src="{{ hero_video }}" type="video/mp4">
+            </video>
+            {% endif %}
+            {% if hero_is_repo %}
+            <canvas id="ot-hero-ambient" class="ot-hero-ambient" aria-hidden="true"></canvas>
+            {% endif %}
+        </div>
+        <div class="ot-hero-veil"></div>
+        <div class="ot-hero-scan"></div>
+        <div class="ot-hero-inner">
+            <div class="ot-ops">
+                <div class="ot-ops-top">
+                    <p class="ot-kicker" style="margin:0;" data-i18n="home.operatorOnline">{{ t('home.operatorOnline') }}</p>
+                    <div class="season-cd season-cd--chip js-season-cd" role="timer" aria-label="{{ t('pass.countdownAria') }}" data-i18n-aria="pass.countdownAria">
+                        <span class="season-cd-label" data-i18n="pass.seasonEnds">{{ t('pass.seasonEnds') }}</span>
+                        <span class="season-cd-live">
+                            <span class="season-cd-cell"><span data-unit="d">--</span><label data-i18n="pass.days">{{ t('pass.days') }}</label></span>
+                            <span class="season-cd-cell"><span data-unit="h">--</span><label data-i18n="pass.hours">{{ t('pass.hours') }}</label></span>
+                            <span class="season-cd-cell"><span data-unit="m">--</span><label data-i18n="pass.min">{{ t('pass.min') }}</label></span>
+                            <span class="season-cd-cell"><span data-unit="s">--</span><label data-i18n="pass.sec">{{ t('pass.sec') }}</label></span>
+                        </span>
+                        <span class="season-cd-ended" hidden data-i18n="pass.seasonEnded">{{ t('pass.seasonEnded') }}</span>
+                    </div>
+                </div>
+                <div class="welcome-meta" style="margin-bottom: 8px;">
+                    <span class="player-card {{ border_wrap_class(nav_active_border) }}" data-player-username="{{ session.get('username', '') }}" data-player-steam="{{ user_steam_id }}" data-active-border="{{ nav_active_border }}" data-default-border="2px solid var(--accent)">
+                        <img class="ot-avatar {{ border_img_class(nav_active_border) }}" src="{{ user_avatar }}" alt="Avatar"{% if border_wrap_class(nav_active_border) %} style="border:none;"{% endif %}>
+                    </span>
+                    <div>
+                        <h1 class="ot-title" data-i18n="home.saturdayCommand">{{ t('home.saturdayCommand') }}</h1>
+                        <p class="page-sub" style="margin-top: 4px;" data-i18n="home.briefingLive" data-i18n-vars='{{ {"name": session.get("username", "Gamer")} | tojson }}'>{{ t('home.briefingLive', name=session.get('username', 'Gamer')) }}</p>
+                    </div>
+                </div>
+                <div class="ot-actions">
+                    <button type="button" id="daily-ore-btn" onclick="claimDailyOre(this)" {% if not daily_claim.available %}disabled{% endif %} style="{% if not daily_claim.available %} opacity:0.55; cursor:not-allowed;{% endif %}" data-i18n="{% if daily_claim.available %}daily.availableStreak{% else %}daily.claimedStreakLong{% endif %}" data-i18n-vars='{{ {"n": daily_claim.streak} | tojson }}'>
+                        {% if daily_claim.available %}{{ t('daily.availableStreak', n=daily_claim.streak) }}{% else %}{{ t('daily.claimedStreakLong', n=daily_claim.streak) }}{% endif %}
+                    </button>
+                    <a href="{{ url_for('events') }}"><button type="button">🗳️ <span data-i18n="home.voteNow">{{ t('home.voteNow') }}</span></button></a>
+                </div>
+            </div>
+
+            <div class="ot-brief">
+                <p class="ot-kicker" data-i18n="home.missionBriefing">{{ t('home.missionBriefing') }}</p>
+                <h2 style="margin: 0 0 4px; font-size: 1.35em;" data-i18n="home.saturdayAt" data-i18n-vars='{{ {"date": next_sat} | tojson }}'>{{ t('home.saturdayAt', date=next_sat) }}</h2>
+                <div class="ot-hud" aria-hidden="true">
+                    <div class="ot-hud-cell"><span id="cd-d">--</span><label data-i18n="pass.days">{{ t('pass.days') }}</label></div>
+                    <div class="ot-hud-cell"><span id="cd-h">--</span><label data-i18n="pass.hours">{{ t('pass.hours') }}</label></div>
+                    <div class="ot-hud-cell"><span id="cd-m">--</span><label data-i18n="pass.min">{{ t('pass.min') }}</label></div>
+                    <div class="ot-hud-cell"><span id="cd-s">--</span><label data-i18n="pass.sec">{{ t('pass.sec') }}</label></div>
+                </div>
+                <p class="muted" style="font-size: 0.88em; margin: 0 0 10px;"><span data-i18n="home.lastSaturday">{{ t('home.lastSaturday') }}</span> {{ last_winner }}</p>
+                <div class="ot-gotw">
+                    {% if has_cover %}
+                    <img src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ appid }}/header.jpg" alt="{{ winner }}" data-appid="{{ appid }}" data-name="{{ winner }}" onerror="steamImgFallback(this)">
+                    {% endif %}
+                    <div>
+                        <div class="ot-kicker" style="margin-bottom: 2px;" data-i18n="home.gameOfWeek">{{ t('home.gameOfWeek') }}</div>
+                        <strong>{{ winner }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ot-split">
+        <div class="box ot-season">
+            <p class="ot-kicker" data-i18n="home.clearanceSeason">{{ t('home.clearanceSeason') }}</p>
+            <p class="muted" style="margin: 0 0 10px;" data-i18n="home.streakXp" data-i18n-vars='{{ {"streak": daily_claim.streak, "xp": xp_today, "cap": daily_xp_cap} | tojson }}'>{{ t('home.streakXp', streak=daily_claim.streak, xp=xp_today, cap=daily_xp_cap) }}</p>
+            <div class="muted" style="font-size:0.75em; letter-spacing:0.12em; text-transform:uppercase; font-weight:800;">{{ season.season_name }}</div>
+            <h3 style="margin:4px 0 8px; font-size:1.15em;"><span data-i18n="pass.levelLabel">{{ t('pass.levelLabel') }}</span> {{ season.level }}{% if season.maxed %} · <span data-i18n="common.max">{{ t('common.max') }}</span>{% endif %}</h3>
+            <div class="pc-xp-bar"><div class="pc-xp-fill" style="width: {{ season.percent }}%;"></div></div>
+            <p class="muted" style="margin:8px 0 0; font-size:0.85em;">{% if season.maxed %}<span data-i18n="home.protocolFlex">{{ t('home.protocolFlex') }}</span>{% else %}<span data-i18n="home.xpNextRank" data-i18n-vars='{{ {"into": season.xp_into_level, "need": season.xp_for_level} | tojson }}'>{{ t('home.xpNextRank', into=season.xp_into_level, need=season.xp_for_level) }}</span>{% endif %}{% if season.claimable_count %} · <span data-i18n="{% if season.claimable_count != 1 %}home.rewardsWaiting{% else %}home.rewardWaiting{% endif %}" data-i18n-vars='{{ {"n": season.claimable_count} | tojson }}'>{{ t('home.rewardsWaiting' if season.claimable_count != 1 else 'home.rewardWaiting', n=season.claimable_count) }}</span>{% endif %}</p>
+            <a href="/pass"><button type="button" style="margin-top:12px; width:100%;">📡 <span data-i18n="home.openPass">{{ t('home.openPass') }}</span></button></a>
+        </div>
+
+        <div class="box ot-radar">
+            <div class="ot-radar-scan"></div>
+            <p class="ot-kicker"><span data-i18n="home.tacticalRadar">{{ t('home.tacticalRadar') }}</span> · {{ next_sat }}</p>
+            <h2 style="margin: 0 0 6px; font-size: 1.2em;" data-i18n="home.deploying">{{ t('home.deploying') }}</h2>
+            <form action="{{ url_for('set_radar') }}" method="POST" style="display: flex; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+                <button type="submit" name="status" value="yes" class="radar-btn btn-yes {% if user_status == 'yes' %}active{% endif %}">🟢 <span data-i18n="common.in">{{ t('common.in') }}</span></button>
+                <button type="submit" name="status" value="maybe" class="radar-btn btn-maybe {% if user_status == 'maybe' %}active{% endif %}">🟡 <span data-i18n="common.maybe">{{ t('common.maybe') }}</span></button>
+                <button type="submit" name="status" value="no" class="radar-btn btn-no {% if user_status == 'no' %}active{% endif %}">🔴 <span data-i18n="common.out">{{ t('common.out') }}</span></button>
+            </form>
+            <div class="radar-cols">
+                <div class="radar-col in">
+                    <h3><span data-i18n="events.inLabel">{{ t('events.inLabel') }}</span> <span class="ot-count">{{ radar_data['yes']|length }}</span></h3>
+                    <div class="radar-avatars" style="justify-content: flex-start;">
+                        {% for u in radar_data['yes'] %}
+                            <span class="player-card {{ border_wrap_class(u.active_border) }}" data-player-username="{{ u.username }}" data-player-steam="{{ u.steam_id or '' }}" data-active-border="{{ u.active_border or '' }}" data-default-border="2px solid #4CAF50">
+                                <img src="{{ u.avatar or default_avatar }}" class="{{ border_img_class(u.active_border) }}" onclick='openPlayerCard({{ u.username | tojson }})' data-tooltip="{{ u.username }} (IN)" style="border: 2px solid #4CAF50;{% if border_wrap_class(u.active_border) %}border:none;{% endif %}">
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="radar-col maybe">
+                    <h3><span data-i18n="events.maybeLabel">{{ t('events.maybeLabel') }}</span> <span class="ot-count">{{ radar_data['maybe']|length }}</span></h3>
+                    <div class="radar-avatars" style="justify-content: flex-start;">
+                        {% for u in radar_data['maybe'] %}
+                            <span class="player-card {{ border_wrap_class(u.active_border) }}" data-player-username="{{ u.username }}" data-player-steam="{{ u.steam_id or '' }}" data-active-border="{{ u.active_border or '' }}" data-default-border="2px solid #FFC107">
+                                <img src="{{ u.avatar or default_avatar }}" class="{{ border_img_class(u.active_border) }}" onclick='openPlayerCard({{ u.username | tojson }})' data-tooltip="{{ u.username }} (MAYBE)" style="border: 2px solid #FFC107; opacity: 0.8;{% if border_wrap_class(u.active_border) %}border:none;{% endif %}">
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="radar-col out">
+                    <h3><span data-i18n="events.outLabel">{{ t('events.outLabel') }}</span> <span class="ot-count">{{ radar_data['no']|length }}</span></h3>
+                    <div class="radar-avatars" style="justify-content: flex-start;">
+                        {% for u in radar_data['no'] %}
+                            <span class="player-card {{ border_wrap_class(u.active_border) }}" data-player-username="{{ u.username }}" data-player-steam="{{ u.steam_id or '' }}" data-active-border="{{ u.active_border or '' }}" data-default-border="2px solid #F44336">
+                                <img src="{{ u.avatar or default_avatar }}" class="{{ border_img_class(u.active_border) }}" onclick='openPlayerCard({{ u.username | tojson }})' data-tooltip="{{ u.username }} (OUT)" style="border: 2px solid #F44336; opacity: 0.4; filter: grayscale(100%);{% if border_wrap_class(u.active_border) %}border:none;{% endif %}">
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="box ot-distress {% if active_beacons %}hot{% endif %}">
+        <p class="ot-kicker" style="color: #ff4c4c;" data-i18n="home.airwaves">{{ t('home.airwaves') }}</p>
+        <h2 style="color: #ff4c4c; margin: 0 0 10px; font-size: 1.35em;">🚨 <span data-i18n="home.activeWatchouts">{{ t('home.activeWatchouts') }}</span></h2>
+        {% if active_beacons %}
+        <p class="muted" style="margin-bottom: 16px;" data-i18n="home.distress">{{ t('home.distress') }}</p>
+        <div class="ot-distress-grid">
+            {% for b in active_beacons %}
+            <div class="watchout-card">
+                <strong style="color: #ff4c4c; font-size: 1.25em; display: block; margin-bottom: 5px;">
+                    <span onclick='openPlayerCard({{ b.username | tojson }})' style="cursor: pointer; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#ff4c4c'">{{ b.username }}</span>
+                </strong>
+                <span class="muted" style="font-size: 0.95em;" data-i18n="home.lookingIn">{{ t('home.lookingIn') }}</span>
+                <div style="color: white; font-weight: 800; font-size: 1.15em; margin-top: 6px;">{{ b.game }}</div>
+                {% if session.get('username') == b.username %}
+                <form action="/delete_watchout/{{ b.id }}" method="POST" style="position: absolute; top: 15px; right: 15px;">
+                    <button type="submit" class="icon-btn" data-tooltip="{{ t('home.closeWatchout') }}" data-i18n-title="home.closeWatchout">✖️</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted" data-i18n="home.airwavesQuiet">{{ t('home.airwavesQuiet') }}</p>
+        {% endif %}
+        <a href="/watchout"><button type="button" style="margin-top: 18px; background: #ff4c4c; color: white; border: none; font-weight: 800; padding: 12px 25px;">🚨 <span data-i18n="home.goWatchout">{{ t('home.goWatchout') }}</span></button></a>
+    </div>
+</div>
+
+<script>
+function pad2(n) { return String(n).padStart(2, '0'); }
+function updateCountdown() {
+    const now = new Date();
+    const resultDate = new Date("{{ next_sat }}T20:00:00");
+    const diff = resultDate - now;
+    const setHud = (d, h, m, s) => {
+        const el = (id, v) => { const n = document.getElementById(id); if (n) n.innerText = v; };
+        el('cd-d', d); el('cd-h', h); el('cd-m', m); el('cd-s', s);
+    };
+    if (diff <= 0) {
+        setHud('00', '00', '00', '00');
+        return;
+    }
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    setHud(pad2(days), pad2(hours), pad2(minutes), pad2(seconds));
+}
+setInterval(updateCountdown, 1000); updateCountdown();
+
+(function heroMedia() {
+    const video = document.getElementById('ot-hero-video');
+    const poster = document.getElementById('ot-hero-poster');
+    const canvas = document.getElementById('ot-hero-ambient');
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (video) {
+        const fail = function () {
+            video.style.display = 'none';
+            if (poster) poster.style.zIndex = '1';
+        };
+        video.addEventListener('error', fail);
+        const source = video.querySelector('source');
+        if (source) source.addEventListener('error', fail);
+        if (reduce) {
+            video.pause();
+            video.removeAttribute('autoplay');
+            fail();
+        } else {
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) video.pause();
+                else video.play().catch(function () {});
+            });
+            video.play().catch(function () {});
+        }
+    }
+
+    if (!canvas || reduce) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const motes = [];
+    function resize() {
+        canvas.width = canvas.clientWidth || 800;
+        canvas.height = canvas.clientHeight || 420;
+        motes.length = 0;
+        const n = Math.max(18, Math.floor(canvas.width / 40));
+        for (let i = 0; i < n; i++) {
+            motes.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                r: 20 + Math.random() * 70,
+                vx: -0.15 + Math.random() * 0.3,
+                vy: -0.08 + Math.random() * 0.16,
+                a: 0.04 + Math.random() * 0.08,
+            });
+        }
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    let scan = 0;
+    let raf;
+    function tick() {
+        if (document.hidden) {
+            raf = requestAnimationFrame(tick);
+            return;
+        }
+        const w = canvas.width, h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = 'rgba(40, 0, 0, 0.18)';
+        ctx.fillRect(0, 0, w, h);
+        motes.forEach(function (m) {
+            m.x += m.vx; m.y += m.vy;
+            if (m.x < -m.r) m.x = w + m.r;
+            if (m.x > w + m.r) m.x = -m.r;
+            if (m.y < -m.r) m.y = h + m.r;
+            if (m.y > h + m.r) m.y = -m.r;
+            const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r);
+            g.addColorStop(0, 'rgba(255, 70, 50, ' + m.a + ')');
+            g.addColorStop(1, 'rgba(255, 70, 50, 0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        scan = (scan + 0.6) % (h + 40);
+        ctx.fillStyle = 'rgba(255, 80, 60, 0.07)';
+        ctx.fillRect(0, scan, w, 18);
+        raf = requestAnimationFrame(tick);
+    }
+    tick();
+})();
+</script>
+
+{% if needs_steam_link %}
+<div id="steam-remind-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="steam-remind-title" style="display:none;">
+    <div class="box steam-remind-box">
+        <p class="steam-remind-kicker">Steam</p>
+        <h3 id="steam-remind-title" data-i18n="home.steamRemindTitle">{{ t('home.steamRemindTitle') }}</h3>
+        <p data-i18n="home.steamRemindBody">{{ t('home.steamRemindBody') }}</p>
+        <div class="steam-remind-actions">
+            <button type="button" class="ore-dialog-cancel" id="steam-remind-later" data-i18n="home.steamRemindLater">{{ t('home.steamRemindLater') }}</button>
+            <button type="button" id="steam-remind-open" data-i18n="home.steamRemindOpen">{{ t('home.steamRemindOpen') }}</button>
+        </div>
+    </div>
+</div>
+<script>
+(function steamIdReminder() {
+    const overlay = document.getElementById('steam-remind-overlay');
+    if (!overlay) return;
+    const who = {{ session.get('username') | tojson }};
+    const key = 'ot_steam_remind_snooze:' + String(who || '').toLowerCase();
+    const snoozeMs = 12 * 60 * 60 * 1000;
+    try {
+        const until = Number(localStorage.getItem(key) || 0);
+        if (until && Date.now() < until) return;
+    } catch (e) {}
+
+    function hide() {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    function snooze() {
+        try { localStorage.setItem(key, String(Date.now() + snoozeMs)); } catch (e) {}
+        hide();
+    }
+    function openEditor() {
+        hide();
+        const btn = document.getElementById('open-steam-modal');
+        if (btn) btn.click();
+        setTimeout(function () {
+            const input = document.querySelector('#steam-modal input[name="steam_id"]');
+            if (input) {
+                input.focus();
+                input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+        }, 180);
+    }
+
+    document.getElementById('steam-remind-later').addEventListener('click', snooze);
+    document.getElementById('steam-remind-open').addEventListener('click', openEditor);
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) snooze();
+    });
+    setTimeout(function () {
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }, 400);
+})();
+</script>
+{% endif %}
+
+<div class="home-credit">
+    <div>
+        <span style="font-size: 1.05em; font-weight: 800; color: white;" data-i18n="home.platform">{{ t('home.platform') }}</span>
+        <div class="muted" style="font-size: 0.85em; margin-top: 3px;"><span data-i18n="home.createdBy">{{ t('home.createdBy') }}</span> <span style="color: var(--accent); font-weight: 800;">{{ home_creator_a }}</span>{% if home_creator_b %} &amp; <span style="color: var(--accent); font-weight: 800;">{{ home_creator_b }}</span>{% endif %}</div>
+    </div>
+
+    <div class="loc-chip">
+        <span class="muted" style="font-size: 0.9em;" data-i18n="home.totalLoc">{{ t('home.totalLoc') }}</span>
+        <strong style="color: #3fb950; font-size: 1.2em; margin-left: 5px;">{{ total_loc }}</strong>
+    </div>
+</div>
+
+{% endblock %}

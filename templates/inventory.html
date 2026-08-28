@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .loot-hero { text-align: left; margin-bottom: 8px; }
+    .loot-hero h1 { margin: 0; color: #FFD700; text-shadow: 0 0 15px rgba(255,215,0,0.35); }
+    .loot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+    }
+    .loot-group .loot-grid { margin-top: 0; }
+    .loot-card {
+        position: relative;
+        display: flex; flex-direction: column;
+        text-decoration: none; color: inherit;
+        background: color-mix(in srgb, var(--bg-box) 88%, #000);
+        border-radius: 10px; overflow: hidden;
+        border: 2px solid var(--loot-color, #9aa0a6);
+        box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 8px 22px rgba(0,0,0,0.35), 0 0 16px color-mix(in srgb, var(--loot-color) 28%, transparent);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        text-align: center;
+    }
+    .loot-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 12px 28px rgba(0,0,0,0.45), 0 0 22px color-mix(in srgb, var(--loot-color) 45%, transparent);
+    }
+    .loot-card.is-equipped::after {
+        content: attr(data-equipped-label);
+        position: absolute; top: 8px; right: 8px; z-index: 2;
+        font-size: 0.62em; font-weight: 900; letter-spacing: 0.08em;
+        background: var(--loot-color); color: #111; padding: 3px 6px; border-radius: 4px;
+    }
+    .loot-preview {
+        height: 118px; display: flex; align-items: center; justify-content: center;
+        background:
+            linear-gradient(180deg, color-mix(in srgb, var(--loot-color) 16%, transparent), transparent 70%),
+            rgba(0,0,0,0.35);
+        position: relative;
+    }
+    .loot-preview .avatar-preview {
+        width: 72px !important; height: 72px !important; border-radius: 50% !important;
+        object-fit: cover !important; background: #111; display: block;
+    }
+    .loot-banner {
+        width: 86%; height: 52px; border-radius: 6px; overflow: hidden;
+        display: flex; align-items: center; justify-content: center; position: relative;
+        border: 1px solid rgba(255,255,255,0.12);
+    }
+    .loot-banner span { font-size: 0.95em !important; position: relative; z-index: 2; }
+    .loot-emoji { font-size: 2.4em; filter: drop-shadow(0 0 10px var(--loot-color)); }
+    .loot-body { padding: 10px 10px 12px; }
+    .loot-name { font-weight: 900; font-size: 0.92em; margin: 0 0 4px; }
+    .loot-meta {
+        font-size: 0.72em; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--loot-color);
+    }
+    .loot-group { margin-top: 22px; }
+    .loot-group:first-of-type { margin-top: 18px; }
+    .loot-group-head {
+        display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid color-mix(in srgb, var(--loot-color) 35%, transparent);
+    }
+    .loot-group-head h2 {
+        margin: 0; font-size: 0.82em; letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--loot-color); font-weight: 900;
+    }
+    .loot-group-count { font-size: 0.72em; font-weight: 800; opacity: 0.7; }
+    .loot-qty {
+        position: absolute; top: 8px; left: 8px; z-index: 2;
+        font-size: 0.62em; font-weight: 900; letter-spacing: 0.06em;
+        background: rgba(0,0,0,0.65); color: #fff; padding: 3px 6px; border-radius: 4px;
+    }
+    .loot-empty {
+        padding: 42px 20px; text-align: center;
+        border: 1px dashed color-mix(in srgb, var(--accent) 35%, transparent);
+        border-radius: 14px;
+    }
+</style>
+
+<div class="loot-hero">
+    <p class="muted" style="margin:0 0 4px; letter-spacing:0.16em; text-transform:uppercase; font-weight:800; font-size:0.72em;" data-i18n="inventory.kicker">{{ t('inventory.kicker') }}</p>
+    <h1>🎒 <span data-i18n="inventory.title">{{ t('inventory.title') }}</span></h1>
+    <p class="page-sub" data-i18n="inventory.sub">{{ t('inventory.sub') }}</p>
+</div>
+
+{% if loot_groups %}
+{% for group in loot_groups %}
+<div class="loot-group" style="--loot-color: {{ group.color }};">
+    <div class="loot-group-head">
+        <h2 data-i18n="rarity.{{ group.key }}">{{ t('rarity.' + group.key) }}</h2>
+        <span class="loot-group-count">{{ group.items|length }}</span>
+    </div>
+    <div class="loot-grid">
+        {% for item in group.items %}
+        <a class="loot-card{% if item.equipped %} is-equipped{% endif %}" href="/shop" style="--loot-color: {{ item.rarity_color }};" data-equipped-label="{{ t('inventory.equipped') }}" data-i18n-equipped>
+            {% if item.qty and item.qty > 1 %}<span class="loot-qty">×{{ item.qty }}</span>{% endif %}
+            <div class="loot-preview">
+            {% if item.type == 'border' %}
+                {% if item.wrap %}
+                    <div class="{{ item.wrap }}"><img src="{{ user_avatar }}" class="avatar-preview" style="border:none !important;" alt=""></div>
+                {% elif item.img_class %}
+                    <img src="{{ user_avatar }}" class="avatar-preview {{ item.img_class }}" alt="">
+                {% else %}
+                    <span class="loot-emoji">{{ item.icon }}</span>
+                {% endif %}
+            {% elif item.type == 'banner' %}
+                {% if item.key == 'standard' %}
+                    <div class="loot-banner" style="background:#333;"><span class="banner-standard-text">{{ item.preview_text or 'OreTime' }}</span></div>
+                {% elif item.key == 'pro' %}
+                    <div class="loot-banner" style="background:#000;"><span class="banner-pro-text" style="color:#ff0000; filter:drop-shadow(0 0 5px #ff0000);">{{ item.preview_text or 'OreTime' }}</span></div>
+                {% elif item.key == 'ultra' %}
+                    <div class="loot-banner" style="background:linear-gradient(90deg,#ff0000 0%,#000 50%,#0000ff 100%);"><span class="banner-ultra-text" style="color:#00ffff; filter:drop-shadow(0 0 5px #00ffff);">{{ item.preview_text or 'OreTime' }}</span></div>
+                {% elif item.key == 'giga_banner' %}
+                    <div class="loot-banner giga-banner-bg" style="--giga-flow:linear-gradient(90deg,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff0000);"><span class="banner-giga-text">{{ item.preview_text or 'OreTime' }}</span></div>
+                {% elif item.banner_class %}
+                    <div class="loot-banner {{ item.banner_class }}"><span class="{{ item.text_class }}">{{ item.preview_text or 'OreTime' }}</span></div>
+                {% else %}
+                    <span class="loot-emoji">{{ item.icon }}</span>
+                {% endif %}
+            {% else %}
+                <span class="loot-emoji">{{ item.icon }}</span>
+            {% endif %}
+        </div>
+        <div class="loot-body">
+            <div class="loot-name">{{ item.label }}</div>
+            <div class="loot-meta"><span data-i18n="rarity.{{ item.rarity }}">{{ t('rarity.' + item.rarity) }}</span> · <span data-i18n="kind.{{ item.type }}">{{ t('kind.' + item.type) }}</span>{% if item.exclusive %} · <span data-i18n="inventory.passExclusive">{{ t('inventory.passExclusive') }}</span>{% endif %}</div>
+        </div>
+    </a>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="box loot-empty">
+    <div style="font-size:2.4em; margin-bottom:8px;">📦</div>
+    <h2 style="margin:0 0 8px;" data-i18n="inventory.emptyTitle">{{ t('inventory.emptyTitle') }}</h2>
+    <p class="muted" data-i18n="inventory.emptyBody">{{ t('inventory.emptyBody') }}</p>
+    <a href="/shop"><button type="button" style="background:#FFD700; color:#111; font-weight:900;" data-i18n="inventory.goShop">{{ t('inventory.goShop') }}</button></a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .pass-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: #FFD700; opacity: 0.9; margin: 0 0 6px;
+    }
+    .pass-hero {
+        position: relative; overflow: hidden; text-align: left; max-width: 920px; margin: 0 auto 28px;
+        padding: 28px 24px 24px;
+        background:
+            radial-gradient(ellipse at 12% 0%, rgba(255,215,0,0.2), transparent 50%),
+            radial-gradient(ellipse at 90% 80%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 45%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 90%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, #FFD700 40%, transparent);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 16px 40px rgba(0,0,0,0.35);
+    }
+    .pass-hero h1 { margin: 0 0 8px; color: #FFD700; text-shadow: 0 0 20px rgba(255,215,0,0.4); }
+    .pass-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .pass-earn { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pass-earn span {
+        background: rgba(0,0,0,0.35);
+        border: 1px solid rgba(255,215,0,0.18);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 0.82em;
+        font-weight: 700;
+    }
+
+    .pass-map {
+        position: relative; max-width: 720px; margin: 0 auto;
+        padding: 8px 0 12px;
+    }
+    .pass-map::before {
+        content: ''; position: absolute; left: 50%; top: 12px; bottom: 12px; width: 3px;
+        transform: translateX(-50%);
+        background: linear-gradient(180deg, rgba(255,215,0,0.15), var(--accent), rgba(255,215,0,0.15));
+        box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent);
+        border-radius: 999px;
+    }
+    .pass-track {
+        display: flex; flex-direction: column; gap: 18px;
+        position: relative; z-index: 1;
+    }
+    .pass-node {
+        width: min(320px, calc(50% - 28px));
+        text-align: center;
+        padding: 16px 14px 18px;
+        margin: 0;
+        border-top: 4px solid rgba(255,255,255,0.12);
+        position: relative;
+        opacity: 0.55;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 55%, transparent), rgba(0,0,0,0.32));
+        box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+    }
+    .pass-node:nth-child(odd) { align-self: flex-start; }
+    .pass-node:nth-child(even) { align-self: flex-end; }
+    .pass-node::after {
+        content: ''; position: absolute; top: 22px; width: 28px; height: 3px;
+        background: color-mix(in srgb, var(--accent) 55%, transparent);
+    }
+    .pass-node:nth-child(odd)::after { right: -28px; }
+    .pass-node:nth-child(even)::after { left: -28px; }
+    .pass-node.reached { opacity: 0.9; border-top-color: var(--accent); }
+    .pass-node.current { opacity: 1; box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 28%, transparent); }
+    .pass-node.claimable { opacity: 1; border-top-color: #FFD700; box-shadow: 0 0 16px rgba(255,215,0,0.28); }
+    .pass-node.claimed { opacity: 1; border-top-color: #3fb950; }
+    .pass-node.locked { opacity: 0.78; }
+    .pass-lv {
+        font-size: 0.68em;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        font-weight: 800;
+        opacity: 0.55;
+        margin-bottom: 10px;
+    }
+    .pass-preview {
+        min-height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+    }
+    .pass-empty {
+        width: 42px; height: 42px; border-radius: 50%;
+        border: 2px dashed rgba(255,255,255,0.22);
+        margin: 18px auto;
+    }
+    .pass-node.reached .pass-empty { border-style: solid; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+    .avatar-preview {
+        width: 72px !important;
+        height: 72px !important;
+        border-radius: 50% !important;
+        object-fit: cover !important;
+        background: #111;
+        display: block;
+    }
+    .shop-banner-preview {
+        width: 100%;
+        height: 56px;
+        border-radius: 10px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .shop-border-preview {
+        width: 100%;
+        height: 88px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.35);
+        overflow: visible;
+    }
+    .sb-text {
+        position: absolute;
+        width: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        text-align: center;
+        pointer-events: none;
+        user-select: none;
+        z-index: 6;
+    }
+    .pass-claim {
+        width: 100%;
+        margin-top: 8px;
+        background: linear-gradient(90deg, #FFD700, #ff6a00);
+        color: #111;
+        font-weight: 900;
+        padding: 8px 10px;
+        font-size: 0.88em;
+    }
+    .pass-claim:disabled { opacity: 0.55; cursor: not-allowed; }
+    .pass-status {
+        display: inline-block;
+        margin-top: 10px;
+        font-size: 0.7em;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        opacity: 0.5;
+    }
+    .pass-node.claimed .pass-status,
+    .pass-node.claimable .pass-status { opacity: 1; }
+    .pass-item-head {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 2px;
+    }
+    .pass-item-head strong { font-size: 0.95em; letter-spacing: 0.02em; }
+    .pass-chip {
+        min-width: 72px; min-height: 72px; border-radius: 16px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 900; letter-spacing: 0.04em;
+        border: 1px solid rgba(255,215,0,0.35);
+        background: rgba(0,0,0,0.35);
+        box-shadow: 0 0 16px rgba(255,215,0,0.18);
+    }
+    .pass-chip.oc { color: #FFD700; font-size: 1.05em; }
+    .pass-chip.xp { color: #00e5ff; border-color: rgba(0,229,255,0.4); box-shadow: 0 0 16px rgba(0,229,255,0.18); }
+    .pass-chip.title {
+        color: #ff4c4c; border-color: rgba(255,76,76,0.45);
+        font-size: 0.72em; letter-spacing: 0.12em; text-transform: uppercase;
+        padding: 8px; text-align: center; line-height: 1.2;
+    }
+    .pass-exclusive {
+        display: inline-block; margin: 0; padding: 3px 8px; border-radius: 999px;
+        font-size: 0.62em; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+        color: #FFD700; border: 1px solid rgba(255,215,0,0.4); background: rgba(255,215,0,0.1);
+    }
+    @media (max-width: 700px) {
+        .pass-map::before { left: 18px; transform: none; }
+        .pass-node { width: 100%; align-self: stretch !important; }
+        .pass-node:nth-child(odd), .pass-node:nth-child(even) { align-self: stretch; }
+        .pass-node::after { display: none; }
+    }
+</style>
+
+<div class="box pass-hero">
+    <p class="pass-kicker" data-i18n="pass.kicker">{{ t('pass.kicker') }}</p>
+    <div class="page-header" style="margin: 0 0 16px;">
+        <h1>📡 <span data-i18n="pass.title">{{ t('pass.title') }}</span></h1>
+        <p class="page-sub" data-i18n="pass.sub" data-i18n-vars='{{ {"season": track.season_name} | tojson }}'>{{ t('pass.sub', season=track.season_name) }}</p>
+    </div>
+    <div class="season-cd season-cd--pass js-season-cd" role="timer" aria-label="{{ t('pass.countdownAria') }}" data-i18n-aria="pass.countdownAria">
+        <p class="pass-kicker" style="margin-bottom:6px;" data-i18n="pass.timeRemaining">{{ t('pass.timeRemaining') }}</p>
+        <div class="season-cd-head">
+            <strong data-i18n="pass.seasonEnds">{{ t('pass.seasonEnds') }}</strong>
+            <span class="muted" style="font-weight:800;">{{ season_ends_label }} · 23:59</span>
+        </div>
+        <div class="season-cd-live">
+            <span class="season-cd-cell"><span data-unit="d">--</span><label data-i18n="pass.days">{{ t('pass.days') }}</label></span>
+            <span class="season-cd-cell"><span data-unit="h">--</span><label data-i18n="pass.hours">{{ t('pass.hours') }}</label></span>
+            <span class="season-cd-cell"><span data-unit="m">--</span><label data-i18n="pass.min">{{ t('pass.min') }}</label></span>
+            <span class="season-cd-cell"><span data-unit="s">--</span><label data-i18n="pass.sec">{{ t('pass.sec') }}</label></span>
+        </div>
+        <p class="season-cd-ended" hidden style="margin:0;" data-i18n="pass.seasonEnded">{{ t('pass.seasonEnded') }}</p>
+    </div>
+    <div class="pass-meta">
+        <div>
+            <div class="muted" style="font-size:0.75em; letter-spacing:0.12em; text-transform:uppercase; font-weight:800;">{{ track.season_name }}</div>
+            <h2 style="margin:4px 0 0;"><span data-i18n="pass.levelLabel">{{ t('pass.levelLabel') }}</span> {{ track.level }}{% if track.maxed %} · <span data-i18n="common.max">{{ t('common.max') }}</span>{% endif %}</h2>
+        </div>
+        <span class="muted" style="font-weight:800;" data-i18n="pass.xpToday" data-i18n-vars='{{ {"n": xp_today, "cap": daily_xp_cap} | tojson }}'>{{ t('pass.xpToday', n=xp_today, cap=daily_xp_cap) }}</span>
+    </div>
+    <div class="pc-xp-bar" style="margin-top:14px;"><div class="pc-xp-fill" style="width: {{ track.percent }}%;"></div></div>
+    <p class="muted" style="margin:10px 0 0; font-size:0.9em;">
+        {% if track.maxed %}
+            <span data-i18n="pass.protocolComplete">{{ t('pass.protocolComplete') }}</span>
+        {% else %}
+            <span data-i18n="pass.xpToLevel" data-i18n-vars='{{ {"into": track.xp_into_level, "need": track.xp_for_level, "level": track.level + 1} | tojson }}'>{{ t('pass.xpToLevel', into=track.xp_into_level, need=track.xp_for_level, level=track.level + 1) }}</span>
+        {% endif %}
+        {% if track.claimable_count %}
+            · <strong style="color:#FFD700;" data-i18n="pass.readyClaim" data-i18n-vars='{{ {"n": track.claimable_count} | tojson }}'>{{ t('pass.readyClaim', n=track.claimable_count) }}</strong>
+        {% endif %}
+    </p>
+    <div class="pass-earn" style="margin-top:14px;">
+        <span data-i18n="pass.voteXp">{{ t('pass.voteXp') }}</span>
+        <span data-i18n="pass.dailyXp">{{ t('pass.dailyXp') }}</span>
+        <span data-i18n="pass.watchoutXp">{{ t('pass.watchoutXp') }}</span>
+        <span data-i18n="pass.flipXp">{{ t('pass.flipXp') }}</span>
+        <span data-i18n="pass.capDay" data-i18n-vars='{{ {"n": daily_xp_cap} | tojson }}'>{{ t('pass.capDay', n=daily_xp_cap) }}</span>
+    </div>
+</div>
+
+<div class="pass-map">
+<div class="pass-track">
+    {% for node in track.nodes %}
+    <div class="box pass-node {{ node.status }}{% if node.current %} current{% endif %}{% if node.reached and not node.reward %} reached{% endif %}" id="pass-node-{{ node.level }}" data-level="{{ node.level }}">
+        <div class="pass-lv"><span data-i18n="pass.outpost">{{ t('pass.outpost') }}</span> {{ node.level }} · {{ node.xp_required }} XP</div>
+        {% if node.reward %}
+            <div class="pass-preview">
+                {% if node.reward.preview.kind == 'border' %}
+                <div class="shop-border-preview">
+                    {% if node.reward.preview.wrapper %}
+                    <div class="{{ node.reward.preview.wrapper }}">
+                        <img src="{{ user_avatar }}" alt="" class="avatar-preview" style="border:none!important;">
+                    </div>
+                    {% else %}
+                        <img src="{{ user_avatar }}" alt="" class="avatar-preview {{ node.reward.preview.img_class }}">
+                    {% endif %}
+                </div>
+                {% elif node.reward.preview.kind == 'banner' %}
+                <div class="shop-banner-preview {{ node.reward.preview.banner_class }}">
+                    <span class="sb-text {{ node.reward.preview.text_class }}" style="font-size:0.78em;">{{ node.reward.preview.text }}</span>
+                </div>
+                {% elif node.reward.preview.kind == 'oc' %}
+                <div class="pass-chip oc">{{ node.reward.preview.text }}</div>
+                {% elif node.reward.preview.kind == 'xp' %}
+                <div class="pass-chip xp">{{ node.reward.preview.text }}</div>
+                {% elif node.reward.preview.kind == 'title' %}
+                <div class="pass-chip title">{{ node.reward.preview.text }}</div>
+                {% endif %}
+            </div>
+            <div class="pass-item-head">
+                <strong>{{ node.reward.label }}</strong>
+                {% if node.reward.type in ('border', 'banner', 'title') %}
+                <div class="pass-exclusive" data-i18n="pass.exclusive">{{ t('pass.exclusive') }}</div>
+                {% endif %}
+            </div>
+            {% if node.reward.type in ('border', 'banner', 'title') %}
+            <div class="muted" style="font-size:0.75em; margin-top:4px; letter-spacing:0.04em;">{% if node.reward.type == 'border' %}<span data-i18n="kind.border">{{ t('kind.border') }}</span>{% elif node.reward.type == 'banner' %}<span data-i18n="kind.banner">{{ t('kind.banner') }}</span>{% else %}<span data-i18n="kind.title">{{ t('kind.title') }}</span>{% endif %}</div>
+            {% elif node.reward.type == 'oc' %}
+            <div class="muted" style="font-size:0.78em; margin-top:4px;" data-i18n="pass.orecoins">{{ t('pass.orecoins') }}</div>
+            {% elif node.reward.type == 'xp' %}
+            <div class="muted" style="font-size:0.78em; margin-top:4px;" data-i18n="pass.seasonXp">{{ t('pass.seasonXp') }}</div>
+            {% endif %}
+            {% if node.status == 'claimable' %}
+                <button type="button" class="pass-claim" onclick="claimPassReward({{ node.level }}, this)" data-i18n="pass.claim">{{ t('pass.claim') }}</button>
+            {% elif node.status == 'claimed' %}
+                <span class="pass-status" style="color:#3fb950;" data-i18n="pass.claimed">{{ t('pass.claimed') }}</span>
+            {% else %}
+                <span class="pass-status" data-i18n="pass.locked">{{ t('pass.locked') }}</span>
+            {% endif %}
+        {% else %}
+            <div class="pass-empty"></div>
+            <div class="muted" style="font-size:0.8em;" data-i18n="pass.rankUp">{{ t('pass.rankUp') }}</div>
+            {% if node.reached %}
+                <span class="pass-status" style="color:var(--accent);" data-i18n="pass.reached">{{ t('pass.reached') }}</span>
+            {% else %}
+                <span class="pass-status" data-i18n="pass.locked">{{ t('pass.locked') }}</span>
+            {% endif %}
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+</div>
+<p class="muted" style="margin-top:8px;" data-i18n="pass.footer">{{ t('pass.footer') }}</p>
+
+<script>
+function claimPassReward(level, btn) {
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    const original = btn.innerText;
+    btn.innerText = (window.OTI18n && OTI18n.t('pass.claiming')) || 'Claiming...';
+    fetch('/api/pass/claim', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level: level })
+    })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || !data.success) {
+                btn.disabled = false;
+                btn.innerText = original;
+                oreAlert(data.error || ((window.OTI18n && OTI18n.t('pass.claimFailed')) || 'Claim failed'));
+                return;
+            }
+            if (data.reward && data.reward.type === 'xp') {
+                location.reload();
+                return;
+            }
+            if (data.new_balance !== undefined && data.new_balance !== null) {
+                document.querySelectorAll('.js-oc-balance').forEach(el => { el.innerText = data.new_balance; });
+            }
+            const node = document.getElementById('pass-node-' + level);
+            if (node) {
+                node.classList.remove('claimable', 'locked');
+                node.classList.add('claimed');
+                const stamp = document.createElement('span');
+                stamp.className = 'pass-status';
+                stamp.style.color = '#3fb950';
+                stamp.textContent = (window.OTI18n && OTI18n.t('pass.claimed')) || 'Claimed';
+                btn.replaceWith(stamp);
+            }
+            if (typeof confetti === 'function') confetti({ particleCount: 140, spread: 70, origin: { y: 0.7 }, zIndex: 999999 });
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerText = original;
+        });
+}
+</script>
+{% endblock %}

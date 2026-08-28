@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .mu-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: #00e5ff; margin: 0 0 6px;
+    }
+    .mu-hero {
+        border-radius: 18px; padding: 22px 22px 8px; margin-bottom: 8px; text-align: left;
+        background:
+            radial-gradient(ellipse at 10% 0%, rgba(0,229,255,0.18), transparent 50%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 92%, #000), transparent);
+        border: 1px solid rgba(0,229,255,0.28);
+    }
+    .catalog-desk {
+        max-width: 640px; margin: 0 auto 36px auto; text-align: left;
+        border: 1px solid #00e5ff;
+        background: linear-gradient(180deg, rgba(0,229,255,0.06), var(--bg-box));
+        box-shadow: 0 0 28px rgba(0,229,255,0.12);
+    }
+    .gallery-wall { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .gallery-shot {
+        margin: 0; padding: 0; overflow: hidden; text-align: left;
+        background: #05080c;
+        border: 1px solid rgba(0,229,255,0.28);
+        box-shadow: 0 16px 36px rgba(0,0,0,0.4);
+        transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .gallery-shot:hover { transform: translateY(-4px); box-shadow: 0 0 28px rgba(0,229,255,0.22), 0 18px 36px rgba(0,0,0,0.45); }
+    .gallery-shot .setup-photo { border-radius: 0; max-height: 240px; border: none; }
+    .showroom { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+    .exhibit.gear-card {
+        margin: 0;
+        background: linear-gradient(180deg, #07141c, var(--bg-box));
+        border: 1px solid rgba(0,229,255,0.35);
+        box-shadow: inset 0 1px 0 rgba(0,229,255,0.18), 0 16px 32px rgba(0,0,0,0.35);
+        position: relative;
+    }
+    .exhibit.gear-card::before {
+        content: ''; position: absolute; top: 0; left: 18%; right: 18%; height: 3px;
+        background: linear-gradient(90deg, transparent, #00e5ff, transparent);
+        opacity: 0.7;
+    }
+    .spec-row { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(0,229,255,0.08); }
+    .spec-row span:first-child { color: #00e5ff; font-weight: 800; font-size: 0.82em; letter-spacing: 0.06em; text-transform: uppercase; }
+    @media (max-width: 640px) {
+        .mu-hero { padding: 16px 14px 4px; }
+    }
+</style>
+
+<div class="mu-hero">
+    <div class="page-header" style="margin-bottom: 16px;">
+        <p class="mu-kicker" data-i18n="armory.kicker">{{ t('armory.kicker') }}</p>
+        <h1 style="color: #00e5ff; text-shadow: 0 0 15px rgba(0,229,255,0.5);">🖥️ <span data-i18n="armory.title">{{ t('armory.title') }}</span></h1>
+        <p class="page-sub" data-i18n="armory.sub">{{ t('armory.sub') }}</p>
+    </div>
+</div>
+
+<div class="box catalog-desk">
+    <p class="mu-kicker" data-i18n="armory.catalog">{{ t('armory.catalog') }}</p>
+    <h2 style="margin-top: 0; color: #00e5ff;" data-i18n="armory.updateGear">{{ t('armory.updateGear') }}</h2>
+    <form method="POST" class="armory-form" enctype="multipart/form-data">
+        <div>
+            <label class="form-label" style="color: var(--text-main);" data-i18n="armory.cpu">{{ t('armory.cpu') }}</label>
+            <input type="text" name="cpu" value="{{ my_setup.cpu if my_setup else '' }}" placeholder="e.g. Ryzen 7 5800X3D" style="width: 100%;">
+        </div>
+        <div>
+            <label class="form-label" style="color: var(--text-main);" data-i18n="armory.gpu">{{ t('armory.gpu') }}</label>
+            <input type="text" name="gpu" value="{{ my_setup.gpu if my_setup else '' }}" placeholder="e.g. RTX 4070" style="width: 100%;">
+        </div>
+        <div>
+            <label class="form-label" style="color: var(--text-main);" data-i18n="armory.mouse">{{ t('armory.mouse') }}</label>
+            <input type="text" name="mouse" value="{{ my_setup.mouse if my_setup else '' }}" placeholder="e.g. Logitech G Pro X" style="width: 100%;">
+        </div>
+        <div>
+            <label class="form-label" style="color: var(--text-main);" data-i18n="armory.keyboard">{{ t('armory.keyboard') }}</label>
+            <input type="text" name="keyboard" value="{{ my_setup.keyboard if my_setup else '' }}" placeholder="e.g. Wooting 60HE" style="width: 100%;">
+        </div>
+        <div style="grid-column: span 2;">
+            <label class="form-label" style="color: var(--text-main);" data-i18n="armory.photo">{{ t('armory.photo') }}</label>
+            <input type="file" name="setup_photo" accept="image/jpeg,image/png,image/webp" style="width: 100%;">
+            {% if my_setup and my_setup['photo'] %}
+            <p class="muted" style="margin:8px 0 0;" data-i18n="armory.photoLive">{{ t('armory.photoLive') }}</p>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn-full" style="grid-column: span 2; background: #00e5ff; color: #000;" data-i18n="armory.saveLoadout">{{ t('armory.saveLoadout') }}</button>
+    </form>
+</div>
+
+{% if gallery %}
+<div class="page-header" style="margin-top:8px;">
+    <p class="mu-kicker" data-i18n="armory.photoHall">{{ t('armory.photoHall') }}</p>
+    <h2 style="margin:0;" data-i18n="armory.showdown">{{ t('armory.showdown') }}</h2>
+    <p class="page-sub" data-i18n="armory.rateHint">{{ t('armory.rateHint') }}</p>
+</div>
+<div class="gallery-wall" style="margin-bottom:28px;">
+    {% for shot in gallery %}
+    <div class="box gallery-shot">
+        <img class="setup-photo" src="{{ url_for('static', filename='uploads/armory/' + shot.photo) }}" alt="{{ shot.username }} setup" style="border-radius:0; max-height:240px;">
+        <div style="padding:14px 16px 16px;">
+            <strong onclick='openPlayerCard({{ shot.username | tojson }})' style="cursor:pointer;">{{ shot.username }}</strong>
+            <div class="muted" style="font-size:0.85em; margin-top:4px;" data-i18n="armory.avgVotes" data-i18n-vars='{{ {"avg": shot.avg_stars or "—", "n": shot.rating_votes} | tojson }}'>{{ t('armory.avgVotes', avg=shot.avg_stars or '—', n=shot.rating_votes) }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="showroom">
+    {% for setup in setups %}
+    <div class="box gear-card exhibit">
+        <p class="mu-kicker" data-i18n="armory.exhibit" data-i18n-vars='{{ {"n": loop.index} | tojson }}'>{{ t('armory.exhibit', n=loop.index) }}</p>
+        <h3 style="margin: 0 0 14px 0; color: white;">
+            <span onclick='openPlayerCard({{ setup.username | tojson }})' style="cursor: pointer; transition: 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='white'">{{ setup.username }}</span><span data-i18n="armory.rig">{{ t('armory.rig') }}</span>
+        </h3>
+
+        {% if setup.photo %}
+        <img class="setup-photo" src="{{ url_for('static', filename='uploads/armory/' + setup.photo) }}" alt="{{ setup.username }} setup" style="margin-bottom:12px;">
+        {% endif %}
+
+        <ul>
+            <li class="spec-row"><span>CPU</span><span>{{ setup.cpu or t('common.unknown') }}</span></li>
+            <li class="spec-row"><span>GPU</span><span>{{ setup.gpu or t('common.unknown') }}</span></li>
+            <li class="spec-row"><span>Mouse</span><span>{{ setup.mouse or t('common.unknown') }}</span></li>
+            <li class="spec-row"><span>Keyboard</span><span>{{ setup.keyboard or t('common.unknown') }}</span></li>
+        </ul>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; gap:10px; flex-wrap:wrap;">
+            <span style="font-weight:800; color:#FFD700;" id="likes-{{ setup.owner_id }}">★ {{ setup.likes }}</span>
+            {% if not setup.is_mine and setup.owner_id %}
+            <button type="button" id="like-btn-{{ setup.owner_id }}" onclick="likeSetup({{ setup.owner_id }})" style="margin:0; background:{% if setup.liked %}#238636{% else %}#00e5ff{% endif %}; color:{% if setup.liked %}#fff{% else %}#000{% endif %}; font-weight:900;" {% if setup.liked %}disabled{% endif %}>
+                {% if setup.liked %}<span data-i18n="armory.stamped">{{ t('armory.stamped') }}</span>{% else %}<span data-i18n="armory.niceSetup">{{ t('armory.niceSetup') }}</span>{% endif %}
+            </button>
+            {% endif %}
+        </div>
+        {% if setup.owner_id %}
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+            <div class="muted" style="font-size:0.8em; margin-bottom:6px;"><span data-i18n="armory.showdown">{{ t('armory.showdown') }}</span> · <span id="avg-{{ setup.owner_id }}">{{ setup.avg_stars or '—' }}</span></div>
+            {% if not setup.is_mine %}
+            <div id="stars-{{ setup.owner_id }}">
+                {% for n in range(1, 6) %}
+                <button type="button" class="star-btn" {% if setup.my_stars %}disabled{% endif %} onclick="rateSetup({{ setup.owner_id }}, {{ n }})">{% if setup.my_stars >= n %}★{% else %}☆{% endif %}</button>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+<script>
+function likeSetup(ownerId) {
+    const btn = document.getElementById('like-btn-' + ownerId);
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    fetch('/api/armory/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner_id: ownerId })
+    }).then(r => r.json().then(data => ({ ok: r.ok, data }))).then(({ ok, data }) => {
+        if (!ok || !data.success) {
+            btn.disabled = false;
+            oreAlert(data.error || ((window.OTI18n && OTI18n.t('armory.alreadyStamped')) || 'Already stamped'));
+            return;
+        }
+        document.getElementById('likes-' + ownerId).innerText = '★ ' + data.likes;
+        btn.innerText = (window.OTI18n && OTI18n.t('armory.stamped')) || 'Stamped';
+        btn.style.background = '#238636';
+        btn.style.color = '#fff';
+    }).catch(() => { btn.disabled = false; });
+}
+function rateSetup(ownerId, stars) {
+    const wrap = document.getElementById('stars-' + ownerId);
+    if (!wrap) return;
+    fetch('/api/armory/rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner_id: ownerId, stars: stars })
+    }).then(r => r.json().then(data => ({ ok: r.ok, data }))).then(({ ok, data }) => {
+        if (!ok || !data.success) {
+            oreAlert(data.error || ((window.OTI18n && OTI18n.t('armory.alreadyRated')) || 'Already rated'));
+            return;
+        }
+        document.getElementById('avg-' + ownerId).innerText = data.avg;
+        wrap.querySelectorAll('button').forEach((btn, i) => {
+            btn.disabled = true;
+            btn.innerText = (i + 1) <= data.stars ? '★' : '☆';
+        });
+    }).catch(() => {});
+}
+</script>
+{% endblock %}

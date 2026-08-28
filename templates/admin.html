@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h1>⚙️ <span data-i18n="admin.title">{{ t('admin.title') }}</span></h1>
+    <p class="page-sub" data-i18n="admin.sub">{{ t('admin.sub') }}</p>
+</div>
+
+<style>
+    .lock-box-red { border: 2px solid #ff4c4c !important; }
+    .lock-box-green { border: 2px solid #3fb950 !important; }
+</style>
+
+<div class="tab-container admin-main-tabs">
+    <button class="tab-btn active" onclick="openAdminTab('tab-manage', this)">⚙️ <span data-i18n="admin.management">{{ t('admin.management') }}</span></button>
+    <button class="tab-btn" onclick="openAdminTab('tab-wishlist', this)">💡 <span data-i18n="admin.wishlist">{{ t('admin.wishlist') }}</span></button>
+    <button class="tab-btn" onclick="openAdminTab('tab-analytics', this)">📊 <span data-i18n="admin.analytics">{{ t('admin.analytics') }}</span></button>
+</div>
+
+<div id="tab-manage" class="tab-content active">
+    {% set box_class = 'lock-box-red' if voting_locked else 'lock-box-green' %}
+
+    <div class="box {{ box_class }}" style="max-width: 600px; margin: 0 auto 28px auto;">
+        <h2 style="margin-top: 0;">🔒 <span data-i18n="admin.votingControl">{{ t('admin.votingControl') }}</span></h2>
+        <p style="font-size: 1.05em; margin-bottom: 20px;">
+            <span data-i18n="admin.status">{{ t('admin.status') }}</span>
+            {% if voting_locked %}
+                <strong style="color: #ff4c4c;"><span data-i18n="admin.locked">{{ t('admin.locked') }}</span> 🔴</strong> <span data-i18n="admin.votingDisabled">{{ t('admin.votingDisabled') }}</span>
+            {% else %}
+                <strong style="color: #3fb950;"><span data-i18n="admin.open">{{ t('admin.open') }}</span> 🟢</strong> <span data-i18n="admin.votingEnabled">{{ t('admin.votingEnabled') }}</span>
+            {% endif %}
+        </p>
+
+        <form action="/admin/toggle_lock" method="POST">
+            {% if voting_locked %}
+                <button type="submit" style="background-color: #3fb950; width: 100%;" data-i18n="admin.unlock">{{ t('admin.unlock') }}</button>
+            {% else %}
+                <button type="submit" style="background-color: #ff4c4c; width: 100%;" data-i18n="admin.lock">{{ t('admin.lock') }}</button>
+            {% endif %}
+        </form>
+    </div>
+
+    {% if session.get('username', '').lower() == founder_username %}
+    <div class="box" style="max-width: 600px; margin: 0 auto 28px auto; text-align: left;">
+        <h2 style="margin-top: 0; font-size: 1.2em;">🪙 Grant OreCoins</h2>
+        <p class="muted" style="margin: 0 0 14px;">Add OC to a wallet. Your name is prefilled — change it to grant someone else.</p>
+        <form action="/admin/grant_oc" method="POST" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+            <div style="flex: 1; min-width: 140px;">
+                <label style="display:block; font-size:0.75em; font-weight:800; opacity:0.7; margin-bottom:4px;">Player</label>
+                <input type="text" name="username" list="oc-grant-users" value="{{ session.get('username', '') }}" required style="width:100%; margin:0; padding:8px;">
+                <datalist id="oc-grant-users">
+                    {% for u in users %}
+                    <option value="{{ u.username }}"></option>
+                    {% endfor %}
+                </datalist>
+            </div>
+            <div style="width: 120px;">
+                <label style="display:block; font-size:0.75em; font-weight:800; opacity:0.7; margin-bottom:4px;">Amount</label>
+                <input type="number" name="amount" min="1" max="100000" value="100" required style="width:100%; margin:0; padding:8px;">
+            </div>
+            <button type="submit" style="margin-top:0;">Grant</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="box" style="max-width: 600px; margin: 0 auto; text-align: left;">
+        <h2 style="margin-top: 0; font-size: 1.2em;" data-i18n="admin.manageGames">{{ t('admin.manageGames') }}</h2>
+        <form action="/admin/add_game" method="POST" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+            <input type="text" name="game_name" data-i18n-placeholder="admin.gameName" placeholder="{{ t('admin.gameName') }}" required style="flex: 1; min-width: 140px; width: auto;">
+            <input type="text" name="steam_appid" data-i18n-placeholder="admin.steamAppid" placeholder="{{ t('admin.steamAppid') }}" required style="flex: 1; min-width: 140px; width: auto;">
+            <button type="submit" style="margin-top: 0;" data-i18n="admin.add">{{ t('admin.add') }}</button>
+        </form>
+
+        <table class="data-table">
+            <tr>
+                <th data-i18n="admin.name">{{ t('admin.name') }}</th>
+                <th data-i18n="admin.steamId">{{ t('admin.steamId') }}</th>
+                <th style="text-align: right;" data-i18n="admin.action">{{ t('admin.action') }}</th>
+            </tr>
+            {% for game in games %}
+            <tr>
+                <td>{{ game.name }}</td>
+                <td>{{ game.steam_appid }}</td>
+                <td style="text-align: right;">
+                    <form action="/admin/delete_game/{{ game.id }}" method="POST" onsubmit="return oreConfirmSubmit(event, otT('admin.deleteGame'));" style="display: inline;">
+                        <button type="submit" class="icon-btn">🗑️</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        {% if session.get('username', '').lower() == founder_username %}
+        <hr style="border-color: var(--accent); opacity: 0.3; margin: 20px 0;">
+        <h2 style="font-size: 1.2em;">🚨 <span data-i18n="admin.danger">{{ t('admin.danger') }}</span></h2>
+        <form action="/admin/clear_votes" method="POST" onsubmit="return oreConfirmSubmit(event, otT('admin.resetConfirm'));">
+            <button type="submit" style="background-color: #ff4c4c; width: 100%; margin-top: 10px;" data-i18n="admin.resetVotes">{{ t('admin.resetVotes') }}</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div id="tab-wishlist" class="tab-content">
+    <div class="box" style="max-width: 900px; margin: 0 auto; text-align: left;">
+        <h2 style="color: var(--accent); margin-top: 0;">💡 <span data-i18n="admin.wishlist">{{ t('admin.wishlist') }}</span></h2>
+        <div class="tab-container" style="justify-content:flex-start; margin: 0 0 16px;">
+            <button type="button" class="tab-btn active" data-wl-bucket="game" onclick="filterWishlist('game', this)" data-i18n="admin.games">{{ t('admin.games') }}</button>
+            <button type="button" class="tab-btn" data-wl-bucket="banner" onclick="filterWishlist('banner', this)" data-i18n="admin.banner">{{ t('admin.banner') }}</button>
+            <button type="button" class="tab-btn" data-wl-bucket="frame" onclick="filterWishlist('frame', this)" data-i18n="admin.frame">{{ t('admin.frame') }}</button>
+            <button type="button" class="tab-btn" data-wl-bucket="other" onclick="filterWishlist('other', this)" data-i18n="admin.other">{{ t('admin.other') }}</button>
+        </div>
+        <table class="data-table" id="wl-admin-table">
+            <tr>
+                <th data-i18n="admin.requester">{{ t('admin.requester') }}</th>
+                <th data-i18n="admin.type">{{ t('admin.type') }}</th>
+                <th data-i18n="admin.message">{{ t('admin.message') }}</th>
+                <th data-i18n="admin.date">{{ t('admin.date') }}</th>
+                <th style="text-align: right;" data-i18n="admin.action">{{ t('admin.action') }}</th>
+            </tr>
+            {% for req in wishlist_requests %}
+            <tr class="wl-admin-row" data-bucket="{{ req.bucket }}" data-kind="{{ req.kind }}">
+                <td style="font-weight: 800;">{{ req.username }}</td>
+                <td class="muted" data-i18n="{% if req.kind == 'game' %}wishlist.game{% elif req.kind == 'banner' %}wishlist.banner{% elif req.kind == 'frame' %}wishlist.frame{% else %}wishlist.other{% endif %}">{% if req.kind == 'game' %}{{ t('wishlist.game') }}{% elif req.kind == 'banner' %}{{ t('wishlist.banner') }}{% elif req.kind == 'frame' %}{{ t('wishlist.frame') }}{% else %}{{ t('wishlist.other') }}{% endif %}</td>
+                <td style="font-weight: 800; color: white;">{{ req.message }}</td>
+                <td class="muted">{{ req.created_at or '—' }}</td>
+                <td style="text-align: right;">
+                    <form action="/admin/delete_wishlist/{{ req.id }}" method="POST" style="display: inline;">
+                        <button type="submit" class="icon-btn" title="{{ t('admin.deleteRequest') }}" data-i18n-title="admin.deleteRequest">🗑️</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr id="wl-empty-all"><td colspan="5" style="padding: 20px; text-align: center;" class="muted" data-i18n="admin.noRequests">{{ t('admin.noRequests') }}</td></tr>
+            {% endfor %}
+            <tr id="wl-empty-filter" style="display:none;"><td colspan="5" style="padding: 20px; text-align: center;" class="muted" data-i18n="admin.nothingTab">{{ t('admin.nothingTab') }}</td></tr>
+        </table>
+    </div>
+</div>
+
+<div id="tab-analytics" class="tab-content">
+    <div class="box" style="max-width: 900px; margin: 0 auto 22px; text-align: left;">
+        <h2 style="margin-top:0;" data-i18n="admin.circulation">{{ t('admin.circulation') }}</h2>
+        <p style="font-size:1.4em; font-weight:900; color:#FFD700; margin:0;"> <span id="oc-total">—</span> <span data-i18n="admin.inWallets">{{ t('admin.inWallets') }}</span></p>
+        <p class="muted" id="pit-ashes-admin" style="margin:8px 0 0;"></p>
+    </div>
+    <div class="box" style="max-width: 900px; margin: 0 auto 22px;">
+        <h2 style="margin-top:0;" data-i18n="admin.votesWeekday">{{ t('admin.votesWeekday') }}</h2>
+        <canvas id="chart-votes" height="120"></canvas>
+    </div>
+    <div class="box" style="max-width: 900px; margin: 0 auto;">
+        <h2 style="margin-top:0;" data-i18n="admin.beaconsHour">{{ t('admin.beaconsHour') }}</h2>
+        <canvas id="chart-beacons" height="120"></canvas>
+    </div>
+</div>
+
+<script>
+    let analyticsLoaded = false;
+    let votesChart, beaconsChart;
+    function openAdminTab(tabId, btnElement) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.admin-main-tabs > .tab-btn').forEach(b => b.classList.remove('active'));
+
+        const tab = document.getElementById(tabId);
+        if (tab) tab.classList.add('active');
+        if (btnElement) btnElement.classList.add('active');
+        if (tabId === 'tab-analytics') loadAnalytics();
+        if (tabId === 'tab-wishlist') filterWishlist('game', document.querySelector('[data-wl-bucket="game"]'));
+    }
+    function filterWishlist(bucket, btn) {
+        document.querySelectorAll('[data-wl-bucket]').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        let shown = 0;
+        document.querySelectorAll('.wl-admin-row').forEach(row => {
+            const match = row.getAttribute('data-bucket') === bucket;
+            row.style.display = match ? '' : 'none';
+            if (match) shown += 1;
+        });
+        const emptyFilter = document.getElementById('wl-empty-filter');
+        const emptyAll = document.getElementById('wl-empty-all');
+        if (emptyAll) {
+            emptyAll.style.display = '';
+            if (emptyFilter) emptyFilter.style.display = 'none';
+            return;
+        }
+        if (emptyFilter) emptyFilter.style.display = shown === 0 ? '' : 'none';
+    }
+    function loadAnalytics(tries) {
+        tries = tries || 0;
+        if (typeof Chart === 'undefined') {
+            if (tries < 25) setTimeout(function () { loadAnalytics(tries + 1); }, 200);
+            return;
+        }
+        fetch('/api/admin/analytics', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                document.getElementById('oc-total').innerText = data.ore_coins_total;
+                document.getElementById('pit-ashes-admin').innerText = otT('admin.ashesAdmin', { n: data.pit_ashes || 0 });
+                const common = { color: '#fff', borderColor: 'rgba(255,255,255,0.12)' };
+                if (votesChart) votesChart.destroy();
+                votesChart = new Chart(document.getElementById('chart-votes'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.votes_weekday.labels,
+                        datasets: [{ label: otT('admin.votesLabel'), data: data.votes_weekday.values, backgroundColor: 'rgba(255,76,76,0.65)', borderRadius: 8 }]
+                    },
+                    options: { plugins: { legend: { display: false } }, scales: { x: { ticks: common, grid: { color: 'rgba(255,255,255,0.06)' } }, y: { ticks: common, grid: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true } } }
+                });
+                if (beaconsChart) beaconsChart.destroy();
+                beaconsChart = new Chart(document.getElementById('chart-beacons'), {
+                    type: 'line',
+                    data: {
+                        labels: data.beacons_hour.labels,
+                        datasets: [{ label: otT('admin.beaconsLabel'), data: data.beacons_hour.values, borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,0.15)', fill: true, tension: 0.3 }]
+                    },
+                    options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff', maxRotation: 90, minRotation: 45 }, grid: { color: 'rgba(255,255,255,0.06)' } }, y: { ticks: common, grid: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true } } }
+                });
+            });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,1032 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Custom Error Modal für den Shop -->
+<div id="shop-error-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div class="box" style="position: relative; width: 90%; max-width: 350px; text-align: center; border: 2px solid #ff4c4c; box-shadow: 0 0 20px rgba(255,76,76,0.3);">
+        <h2 style="color: #ff4c4c; margin-top: 0;">❌ <span data-i18n="common.error">{{ t('common.error') }}</span></h2>
+        <p id="shop-error-message" style="font-size: 1.1em; color: white; margin-bottom: 20px;">{{ t('shop.notEnough') }}</p>
+        <button onclick="document.getElementById('shop-error-modal').style.display='none'" style="width: 100%; background: #ff4c4c; color: white;" data-i18n="common.ok">{{ t('common.ok') }}</button>
+    </div>
+</div>
+
+<style>
+    .avatar-preview { 
+        width: 80px !important; 
+        height: 80px !important; 
+        border-radius: 50% !important; 
+        object-fit: cover !important; 
+        background: #111; 
+        display: block; 
+    }
+    
+    .shop-banner-preview { 
+        width: 100%; 
+        height: 60px; 
+        border-radius: 8px; 
+        margin-bottom: 10px; 
+        position: relative; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        overflow: hidden; 
+        border: 1px solid rgba(255,255,255,0.1); 
+    }
+    .shop-border-preview {
+        width: 100%;
+        height: 110px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.35);
+        border: 1px solid rgba(255,255,255,0.1);
+        overflow: visible;
+    }
+    .shop-banner-name { margin: 0 0 5px 0; font-weight: 900; }
+    .shop-name-standard { color: #f6f7fb; }
+    .shop-name-pro { color: #ff4d4d; text-shadow: 0 0 10px rgba(255,77,77,0.45); }
+    .shop-name-ultra { color: #00ffff; text-shadow: 0 0 10px rgba(0,255,255,0.4); }
+    .shop-name-giga {
+        background-image: linear-gradient(90deg, #ff4d4d, #ffd700, #3fb950, #00e5ff, #bb86fc);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .shop-name-carbon { color: #cfcfcf; text-shadow: 0 0 8px rgba(255,255,255,0.2); }
+    .shop-name-ember { color: #ff6a00; text-shadow: 0 0 10px rgba(255,106,0,0.45); }
+    .shop-name-frost { color: #e8fbff; text-shadow: 0 0 10px #7ad7ff; }
+    .shop-name-ion { color: #00e5ff; text-shadow: 0 0 10px rgba(0,229,255,0.5); }
+    .shop-name-acid { color: #b8ff00; text-shadow: 0 0 10px rgba(184,255,0,0.45); }
+    .shop-name-aurora {
+        background-image: linear-gradient(90deg, #00ffa6, #7c4dff, #00e5ff);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .shop-name-velvet { color: #ff2d78; text-shadow: 0 0 10px rgba(255,45,120,0.5); }
+    .shop-name-molten { color: #ff3b00; text-shadow: 0 0 10px rgba(255,106,0,0.55); }
+    .sb-text {
+        position: absolute; 
+        width: 100%; 
+        top: 50%; 
+        transform: translateY(-50%); 
+        text-align: center; 
+        pointer-events: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    .casino-stake-btn {
+        background: rgba(0,0,0,0.5);
+        border: 2px solid rgba(255,215,0,0.35);
+        color: #FFD700;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 800;
+        cursor: pointer;
+        min-width: 72px;
+        margin-top: 0;
+        transition: 0.2s;
+    }
+    .casino-stake-btn:hover { border-color: #FFD700; transform: translateY(-2px); background: rgba(0,0,0,0.5); color: #FFD700; }
+    .casino-stake-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .casino-stake-btn.active {
+        background: #FFD700;
+        color: #111;
+        box-shadow: 0 0 16px rgba(255,215,0,0.45);
+    }
+    .casino-stake-btn.active:hover { background: #FFD700; color: #111; }
+    .side-btn {
+        background: rgba(0,0,0,0.45); border: 2px solid rgba(255,255,255,0.2); color: white;
+        padding: 12px 22px; border-radius: 12px; font-weight: 900; cursor: pointer; margin-top: 0; min-width: 120px;
+    }
+    .side-btn.active.heads { background: #FFD700; color: #111; border-color: #FFD700; }
+    .side-btn.active.tails { background: #cfd8dc; color: #111; border-color: #eceff1; }
+    .flip-scene { perspective: 700px; width: 140px; height: 140px; margin: 10px auto 18px; }
+    .ore-coin {
+        width: 140px; height: 140px; position: relative; transform-style: preserve-3d;
+        transition: transform 1.6s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+    }
+    .ore-coin.spinning { animation: coinToss 0.18s linear infinite; }
+    @keyframes coinToss { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+    .ore-face {
+        position: absolute; inset: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-weight: 900; font-size: 1.4em; backface-visibility: hidden; border: 6px solid #111;
+    }
+    .ore-face.heads { background: radial-gradient(circle at 35% 30%, #fff3b0, #FFD700 45%, #9a6b00); color: #3a2700; box-shadow: 0 0 24px rgba(255,215,0,0.45); }
+    .ore-face.tails { background: radial-gradient(circle at 35% 30%, #fff, #b0bec5 45%, #546e7a); color: #1c2830; transform: rotateY(180deg); box-shadow: 0 0 24px rgba(176,190,197,0.35); }
+    .flip-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,215,0,0.12); text-align: left; }
+    .crate-box { position: relative; width: 160px; height: 160px; margin: 0 auto 18px; }
+    .ore-crate {
+        width: 160px; height: 130px; margin-top: 30px; background: linear-gradient(180deg, #3a2412, #1a0e08);
+        border: 3px solid #FFD700; border-radius: 8px; box-shadow: 0 12px 30px rgba(0,0,0,0.45), 0 0 18px rgba(255,215,0,0.2);
+        position: relative;
+    }
+    .ore-crate::before {
+        content: ''; position: absolute; left: -3px; right: -3px; top: -28px; height: 32px;
+        background: linear-gradient(180deg, #5a3a18, #2a180c); border: 3px solid #FFD700; border-bottom: none; border-radius: 8px 8px 0 0;
+    }
+    .ore-crate.shake { animation: crateShake 0.7s ease-in-out; }
+    @keyframes crateShake {
+        0%,100% { transform: rotate(0); }
+        20% { transform: rotate(-8deg) translateY(-6px); }
+        40% { transform: rotate(8deg) translateY(-2px); }
+        60% { transform: rotate(-6deg); }
+        80% { transform: rotate(5deg); }
+    }
+    #crate-reveal { display: none; margin-top: 16px; padding: 16px; border-radius: 10px; text-align: center; }
+    #crate-reveal.common { border: 2px solid #9aa0a6; }
+    #crate-reveal.uncommon { border: 2px solid #3fb950; box-shadow: 0 0 16px rgba(63,185,80,0.25); }
+    #crate-reveal.rare { border: 2px solid #bb86fc; box-shadow: 0 0 18px rgba(187,134,252,0.3); }
+    #crate-reveal.secret { border: 2px solid #00ffc8; box-shadow: 0 0 24px rgba(255,43,214,0.4); animation: voidGlitch 0.8s steps(2) infinite; }
+    .season-reward { text-align: center; padding: 12px; }
+    .xp-bar { height: 10px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; border: 1px solid rgba(0,229,255,0.25); }
+    .xp-fill { height: 100%; background: linear-gradient(90deg, #00e5ff, #ff00aa); }
+    .trade-card { text-align: left; }
+
+</style>
+
+<div class="shop-hero">
+    <h1>🛒 <span data-i18n="shop.title">{{ t('shop.title') }}</span></h1>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <button type="button" id="shop-daily-btn" onclick="claimDailyOre(this)" {% if not nav_daily.available %}disabled{% endif %} style="margin:0; background:linear-gradient(90deg,#00e5ff,#7c4dff); font-weight:900;{% if not nav_daily.available %} opacity:0.55; cursor:not-allowed;{% endif %}">{% if nav_daily.available %}<span data-i18n="shop.dailyOre">{{ t('shop.dailyOre') }}</span>{% else %}<span data-i18n="daily.claimedStreak" data-i18n-vars='{{ {"n": nav_daily.streak} | tojson }}'>{{ t('daily.claimedStreak', n=nav_daily.streak) }}</span>{% endif %}</button>
+        <div class="balance-chip">
+            <span style="opacity: 0.8; font-weight: bold; text-transform: uppercase; font-size: 0.8em;" data-i18n="shop.balance">{{ t('shop.balance') }}</span>
+            <span style="color: #FFD700; font-size: 1.5em; font-weight: 900;" id="user-balance-display" class="js-oc-balance">{{ coins }}</span><span style="color: #FFD700; font-size: 1.0em; font-weight: 900;"> OC</span>
+        </div>
+    </div>
+</div>
+
+<div class="tab-container tabs-gold">
+    <button class="tab-btn active" type="button" onclick="openShopTab('tab-market', this)">🛒 <span data-i18n="shop.market">{{ t('shop.market') }}</span></button>
+    <button class="tab-btn" type="button" onclick="openShopTab('tab-crates', this)">📦 <span data-i18n="shop.crates">{{ t('shop.crates') }}</span></button>
+    <button class="tab-btn" type="button" onclick="openShopTab('tab-casino', this)">🪙 <span data-i18n="shop.coinflip">{{ t('shop.coinflip') }}</span></button>
+    <button class="tab-btn" type="button" onclick="openShopTab('tab-trade', this)">🔀 <span data-i18n="shop.trade">{{ t('shop.trade') }}</span></button>
+</div>
+
+<div id="tab-market" class="tab-content active">
+<p class="page-sub" style="margin-bottom: 32px; text-align: left;" data-i18n="shop.intro">{{ t('shop.intro') }}</p>
+
+<h2 class="section-title" data-i18n="shop.profileUpgrades">{{ t('shop.profileUpgrades') }}</h2>
+<div class="card-grid" style="margin-bottom: 36px;">
+    
+    <div class="box" style="text-align: center; border-top: 4px solid var(--accent); position: relative; overflow: hidden;">
+        <h3 style="margin-top: 0; color: white;">🌟 <span data-i18n="shop.mvpTitle">{{ t('shop.mvpTitle') }}</span></h3>
+        <p style="font-size: 0.9em; opacity: 0.7; height: 40px;" data-i18n="shop.mvpBody">{{ t('shop.mvpBody') }}</p>
+        <div style="font-size: 1.8em; font-weight: 900; color: #FFD700; margin: 15px 0;">200 OC</div>
+        <button id="btn-mvp" onclick="buyItem('mvp', 'btn-mvp')" style="width: 100%; background: var(--accent); color: white; cursor: pointer; transition: 0.2s; font-weight: bold;" data-i18n="shop.buyPerk">{{ t('shop.buyPerk') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; border-top: 4px solid #ff4c4c; position: relative; overflow: hidden;">
+        <h3 style="margin-top: 0; color: white;">🔥 <span data-i18n="shop.titleCard">{{ t('shop.titleCard') }}</span></h3>
+        <p style="font-size: 0.9em; opacity: 0.7; height: 40px;" data-i18n="shop.titleBody">{{ t('shop.titleBody') }}</p>
+        <div style="font-size: 1.8em; font-weight: 900; color: #FFD700; margin: 15px 0;">100 OC</div>
+        <button id="btn-title" onclick="buyItem('title', 'btn-title')" style="width: 100%; background: #ff4c4c; color: white; cursor: pointer; transition: 0.2s; font-weight: bold;" data-i18n="shop.buyTitle">{{ t('shop.buyTitle') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; border-top: 4px solid #7ad7ff; position: relative; overflow: hidden;">
+        <h3 style="margin-top: 0; color: white;">🌙 Welkin</h3>
+        <p style="font-size: 0.9em; opacity: 0.7; height: 40px;">30 days of extra Daily Ore. +20 OC now, +8 OC each claim. Stacks.</p>
+        <div style="font-size: 1.8em; font-weight: 900; color: #FFD700; margin: 15px 0;">150 OC</div>
+        <button id="btn-welkin" onclick="buyItem('welkin', 'btn-welkin')" style="width: 100%; background: linear-gradient(90deg,#7ad7ff,#5865F2); color: #111; cursor: pointer; transition: 0.2s; font-weight: bold;">{% if nav_daily.welkin_active %}Extend Welkin{% else %}Buy Welkin{% endif %}</button>
+    </div>
+
+</div>
+
+<h2 class="section-title" data-i18n="shop.avatarBorders">{{ t('shop.avatarBorders') }}</h2>
+<div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 36px;">
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <img src="{{ user_avatar }}" class="avatar-preview border-hacker">
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #3fb950;">Hacker</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dHacker">{{ t('shop.dHacker') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">50 OC</div>
+        <button id="btn-hacker" onclick="buyItem('hacker', 'btn-hacker')" style="width: 100%; font-size: 0.9em; background: #238636; color: white;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <img src="{{ user_avatar }}" class="avatar-preview border-gold">
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #FFD700;">Gold</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dGold">{{ t('shop.dGold') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">100 OC</div>
+        <button id="btn-gold" onclick="buyItem('gold', 'btn-gold')" style="width: 100%; font-size: 0.9em; background: #FFD700; color: black;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <div class="border-cosmos-wrapper">
+                <img src="{{ user_avatar }}" class="avatar-preview" style="border: none !important;">
+            </div>
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #bb86fc;">Cosmos</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dCosmos">{{ t('shop.dCosmos') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">200 OC</div>
+        <button id="btn-cosmos" onclick="buyItem('cosmos', 'btn-cosmos')" style="width: 100%; font-size: 0.9em; background: #3700b3; color: white;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <div class="border-giga-wrapper">
+                <img src="{{ user_avatar }}" class="avatar-preview" style="border: none !important;">
+            </div>
+        </div>
+        <h3 style="margin: 0 0 5px 0; background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 900;">GIGA</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dGiga">{{ t('shop.dGiga') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">250 OC</div>
+        <button id="btn-giga" onclick="buyItem('giga', 'btn-giga')" style="width: 100%; font-size: 0.9em; background: white; color: black; font-weight: 900;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <div class="border-cyan-wrapper">
+                <img src="{{ user_avatar }}" class="avatar-preview" style="border: none !important;">
+            </div>
+        </div>
+        <h3 style="margin: 0 0 5px 0; background: linear-gradient(90deg, #FFD0DF, #eeadc1, #e796b0, #dd7495); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 900;">Ocean (Pink)</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dCyan">{{ t('shop.dCyan') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">25 OC</div>
+        <button id="btn-cyan" onclick="buyItem('cyan', 'btn-cyan')" style="width: 100%; font-size: 0.9em; background: linear-gradient(90deg, #FFB0C9, #FFC0D4, #FFD0DF); color: #4a2033; font-weight: 900;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <img src="{{ user_avatar }}" class="avatar-preview border-ember">
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #ff6a00;">Ember</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dEmber">{{ t('shop.dEmber') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">60 OC</div>
+        <button id="btn-ember" onclick="buyItem('ember', 'btn-ember')" style="width: 100%; font-size: 0.9em; background: #ff6a00; color: #111;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <img src="{{ user_avatar }}" class="avatar-preview border-frost">
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #7ad7ff;">Frost</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dFrost">{{ t('shop.dFrost') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">75 OC</div>
+        <button id="btn-frost" onclick="buyItem('frost', 'btn-frost')" style="width: 100%; font-size: 0.9em; background: #1a4d66; color: white;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <div class="border-void-wrapper">
+                <img src="{{ user_avatar }}" class="avatar-preview" style="border: none !important;">
+            </div>
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #a855f7;">Void</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dVoid">{{ t('shop.dVoid') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">120 OC</div>
+        <button id="btn-void" onclick="buyItem('void', 'btn-void')" style="width: 100%; font-size: 0.9em; background: #3b0764; color: white;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <div class="border-plasma-wrapper">
+                <img src="{{ user_avatar }}" class="avatar-preview" style="border: none !important;">
+            </div>
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #ff2bd6;">Plasma</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dPlasma">{{ t('shop.dPlasma') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">140 OC</div>
+        <button id="btn-plasma" onclick="buyItem('plasma', 'btn-plasma')" style="width: 100%; font-size: 0.9em; background: #7c4dff; color: white;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <div class="border-aurora-wrapper">
+                <img src="{{ user_avatar }}" class="avatar-preview" style="border: none !important;">
+            </div>
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #00ffa6;">Aurora</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dAurora">{{ t('shop.dAurora') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">180 OC</div>
+        <button id="btn-aurora" onclick="buyItem('aurora', 'btn-aurora')" style="width: 100%; font-size: 0.9em; background: #064e3b; color: white;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <div class="border-glitch-wrapper">
+                <img src="{{ user_avatar }}" class="avatar-preview" style="border: none !important;">
+            </div>
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #00ffc8;">Glitch</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dGlitch">{{ t('shop.dGlitch') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">210 OC</div>
+        <button id="btn-glitch" onclick="buyItem('glitch', 'btn-glitch')" style="width: 100%; font-size: 0.9em; background: #111; color: #00ffc8; border: 1px solid #00ffc8;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-border-preview">
+            <div class="border-obsidian-wrapper">
+                <img src="{{ user_avatar }}" class="avatar-preview" style="border: none !important;">
+            </div>
+        </div>
+        <h3 style="margin: 0 0 5px 0; color: #FFD700;">Obsidian</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dObsidian">{{ t('shop.dObsidian') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">260 OC</div>
+        <button id="btn-obsidian" onclick="buyItem('obsidian', 'btn-obsidian')" style="width: 100%; font-size: 0.9em; background: #111; color: #FFD700; border: 1px solid #FFD700;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+</div>
+
+<h2 class="section-title" data-i18n="shop.customBanners">{{ t('shop.customBanners') }}</h2>
+<div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+    
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview" style="background: #333;">
+            <span class="sb-text banner-standard-text" style="font-size: 1.05em;">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-standard">OreTime Standard</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dStandard">{{ t('shop.dStandard') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;" data-i18n="common.free">{{ t('common.free') }}</div>
+        <button id="btn-stand" onclick="buyItem('standard', 'btn-stand')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview" style="background: #000;">
+            <span class="sb-text banner-pro-text" style="font-size: 1.05em; color: #ff0000; filter: drop-shadow(0 0 5px #ff0000);">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-pro">OreTime Pro</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dPro">{{ t('shop.dPro') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">50 OC</div>
+        <button id="btn-pro" onclick="buyItem('pro', 'btn-pro')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview" style="background: linear-gradient(90deg, #ff0000 0%, #ff0000 15%, #000 50%, #0000ff 85%, #0000ff 100%);">
+            <span class="sb-text banner-ultra-text" style="font-size: 1.05em; color: #00ffff; filter: drop-shadow(0 0 5px #00ffff);">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-ultra">OreTime Ultra</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dUltra">{{ t('shop.dUltra') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">150 OC</div>
+        <button id="btn-ultra" onclick="buyItem('ultra', 'btn-ultra')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview giga-banner-bg" style="--giga-flow: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f00);">
+            <span class="sb-text banner-giga-text" style="font-size: 1.05em; background-image: linear-gradient(90deg, #fff, #000, #fff, #000, #fff);">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-giga">OreTime Giga</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dGigaBanner">{{ t('shop.dGigaBanner') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">200 OC</div>
+        <button id="btn-giga-b" onclick="buyItem('giga_banner', 'btn-giga-b')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview carbon-banner">
+            <span class="sb-text banner-carbon-text" style="font-size: 1.05em;">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-carbon">Carbon</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dCarbon">{{ t('shop.dCarbon') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">30 OC</div>
+        <button id="btn-carbon" onclick="buyItem('carbon', 'btn-carbon')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview emberwake-banner">
+            <span class="sb-text banner-ember-text" style="font-size: 1.05em;">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-ember">Ember Wake</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dEmberWake">{{ t('shop.dEmberWake') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">55 OC</div>
+        <button id="btn-ember-b" onclick="buyItem('ember_banner', 'btn-ember-b')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview frostline-banner">
+            <span class="sb-text banner-frost-text" style="font-size: 1.05em;">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-frost">Frostline</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dFrostline">{{ t('shop.dFrostline') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">70 OC</div>
+        <button id="btn-frost-b" onclick="buyItem('frost_banner', 'btn-frost-b')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview acidvein-banner">
+            <span class="sb-text banner-acid-text" style="font-size: 1.05em;">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-acid">Acid Vein</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dAcidVein">{{ t('shop.dAcidVein') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">90 OC</div>
+        <button id="btn-acid" onclick="buyItem('acid_vein', 'btn-acid')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview ion-banner">
+            <span class="sb-text banner-ion-text" style="font-size: 1.05em;">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-ion">Ion Drift</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dIonDrift">{{ t('shop.dIonDrift') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">110 OC</div>
+        <button id="btn-ion" onclick="buyItem('ion', 'btn-ion')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview velvet-banner">
+            <span class="sb-text banner-velvet-text" style="font-size: 1.05em;">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-velvet">Velvet Static</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dVelvet">{{ t('shop.dVelvet') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">135 OC</div>
+        <button id="btn-velvet" onclick="buyItem('velvet', 'btn-velvet')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview aurora-banner">
+            <span class="sb-text banner-aurora-text" style="font-size: 1.05em;">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-aurora">Aurora Veil</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dAuroraVeil">{{ t('shop.dAuroraVeil') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">160 OC</div>
+        <button id="btn-aurora-b" onclick="buyItem('aurora_banner', 'btn-aurora-b')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+    <div class="box" style="text-align: center; padding: 20px;">
+        <div class="shop-banner-preview molten-banner">
+            <span class="sb-text banner-molten-text" style="font-size: 1.05em;">OreTime</span>
+        </div>
+        <h3 class="shop-banner-name shop-name-molten">Molten</h3>
+        <p style="font-size: 0.8em; opacity: 0.7; height: 35px;" data-i18n="shop.dMolten">{{ t('shop.dMolten') }}</p>
+        <div style="font-size: 1.4em; font-weight: 900; color: #FFD700; margin-bottom: 10px;">190 OC</div>
+        <button id="btn-molten" onclick="buyItem('molten', 'btn-molten')" style="width: 100%; font-size: 0.9em;" data-i18n="common.buyEquip">{{ t('common.buyEquip') }}</button>
+    </div>
+
+</div>
+</div>
+
+<div id="tab-crates" class="tab-content">
+    <div class="box" style="max-width: 720px; margin: 0 auto; text-align: center; border-top: 4px solid #FFD700;">
+        <h2 style="margin-top: 0; color: #FFD700;">📦 <span data-i18n="shop.oreCrate">{{ t('shop.oreCrate') }}</span></h2>
+        <p style="opacity: 0.8; margin-bottom: 8px;" data-i18n="shop.crateBody">{{ t('shop.crateBody') }}</p>
+        <div class="crate-box"><div id="ore-crate" class="ore-crate"></div></div>
+        <button type="button" id="crate-open-btn" onclick="openCrate()" style="width:100%; background:#FFD700; color:#111; font-weight:900; font-size:1.1em; padding:14px;" data-i18n="shop.crackCrate">{{ t('shop.crackCrate') }}</button>
+        <div id="crate-reveal">
+            <div id="crate-rarity" style="font-size:0.8em; letter-spacing:0.16em; font-weight:900; text-transform:uppercase; opacity:0.8;"></div>
+            <div id="crate-drop" style="font-size:1.6em; font-weight:900; margin:8px 0;"></div>
+            <div id="crate-drop-preview" style="max-width:260px; margin:12px auto 0;"></div>
+        </div>
+        <h3 class="section-title" style="margin-top:28px;" data-i18n="shop.protocolRewards">{{ t('shop.protocolRewards') }}</h3>
+        <p class="muted" style="text-align:left; margin-top:0;" data-i18n="shop.protocolHint">{{ t('shop.protocolHint') }}</p>
+        <div class="card-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+            <div class="season-reward box" style="margin:0; padding:14px;">
+                <div class="shop-border-preview"><div class="border-protocol-wrapper"><img src="{{ user_avatar }}" class="avatar-preview" style="border:none!important;"></div></div>
+                <strong>Lv 5</strong><div class="muted">Protocol Ring</div>
+            </div>
+            <div class="season-reward box" style="margin:0; padding:14px;">
+                <div class="shop-banner-preview nightbeacon-banner"><span class="sb-text banner-beacon-text" style="font-size:0.78em;">OreTime</span></div>
+                <strong>Lv 10</strong><div class="muted">Night Beacon</div>
+            </div>
+            <div class="season-reward box" style="margin:0; padding:14px;">
+                <div class="shop-border-preview"><div class="border-orecore-wrapper"><img src="{{ user_avatar }}" class="avatar-preview" style="border:none!important;"></div></div>
+                <strong>Lv 15</strong><div class="muted">OreCore</div>
+            </div>
+            <div class="season-reward box" style="margin:0; padding:14px;">
+                <div class="shop-border-preview"><div class="border-eclipse-wrapper"><img src="{{ user_avatar }}" class="avatar-preview" style="border:none!important;"></div></div>
+                <strong>Lv 16</strong><div class="muted">Eclipse</div>
+            </div>
+            <div class="season-reward box" style="margin:0; padding:14px;">
+                <div class="shop-banner-preview genesis-banner"><span class="sb-text banner-genesis-text" style="font-size:0.8em;">OreTime</span></div>
+                <strong>Lv 17</strong><div class="muted">Genesis</div>
+            </div>
+            <div class="season-reward box" style="margin:0; padding:14px;">
+                <div class="shop-border-preview"><div class="border-apex-wrapper"><img src="{{ user_avatar }}" class="avatar-preview" style="border:none!important;"></div></div>
+                <strong>Lv 18</strong><div class="muted">Apex Ring</div>
+            </div>
+            <div class="season-reward box" style="margin:0; padding:14px;">
+                <div class="shop-banner-preview satmax-banner"><span class="sb-text banner-satmax-text" style="font-size:0.78em;">OreTime</span></div>
+                <strong>Lv 20</strong><div class="muted">Saturday Protocol MAX</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="tab-casino" class="tab-content">
+    <div class="box" style="max-width: 760px; margin: 0 auto; text-align: center; border-top: 4px solid #FFD700;">
+        <h2 style="margin-top: 0; color: #FFD700;">🪙 <span data-i18n="shop.flipPit">{{ t('shop.flipPit') }}</span></h2>
+        <p style="opacity: 0.8;" data-i18n="shop.flipBody">{{ t('shop.flipBody') }}</p>
+        <div class="muted" style="margin-bottom: 18px;"><span data-i18n="shop.flipExpire">{{ t('shop.flipExpire') }}</span> <span id="pit-ashes" data-i18n="shop.ashesBurned" data-i18n-vars='{{ {"n": 0} | tojson }}'>{{ t('shop.ashesBurned', n=0) }}</span></div>
+
+        <div class="flip-scene">
+            <div id="ore-coin" class="ore-coin">
+                <div class="ore-face heads" data-i18n="shop.heads">{{ t('shop.heads') }}</div>
+                <div class="ore-face tails" data-i18n="shop.tails">{{ t('shop.tails') }}</div>
+            </div>
+        </div>
+        <div id="flip-result" class="muted" style="min-height: 1.4em; margin-bottom: 14px;"></div>
+
+        <div style="margin-bottom: 8px; font-weight: bold; text-transform: uppercase; font-size: 0.8em; opacity: 0.75; letter-spacing: 0.04em;" data-i18n="shop.stake">{{ t('shop.stake') }}</div>
+        <div id="casino-stakes" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 16px;">
+            <button type="button" class="casino-stake-btn" data-stake="5" onclick="selectCasinoStake(5)">5</button>
+            <button type="button" class="casino-stake-btn active" data-stake="10" onclick="selectCasinoStake(10)">10</button>
+            <button type="button" class="casino-stake-btn" data-stake="20" onclick="selectCasinoStake(20)">20</button>
+            <button type="button" class="casino-stake-btn" data-stake="50" onclick="selectCasinoStake(50)">50</button>
+            <button type="button" class="casino-stake-btn" data-stake="100" onclick="selectCasinoStake(100)">100</button>
+            <button type="button" class="casino-stake-btn" data-stake="250" onclick="selectCasinoStake(250)">250</button>
+            <button type="button" class="casino-stake-btn" data-stake="500" onclick="selectCasinoStake(500)">500</button>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-bottom:16px; flex-wrap:wrap;">
+            <button type="button" id="side-heads" class="side-btn heads active" onclick="selectFlipSide('heads')">🟡 <span data-i18n="shop.heads">{{ t('shop.heads') }}</span></button>
+            <button type="button" id="side-tails" class="side-btn tails" onclick="selectFlipSide('tails')">⚪ <span data-i18n="shop.tails">{{ t('shop.tails') }}</span></button>
+        </div>
+        <button type="button" id="flip-create-btn" onclick="createFlip()" style="width:100%; background:#FFD700; color:#111; font-weight:900; font-size:1.1em; padding:14px;" data-i18n="shop.lockStake">{{ t('shop.lockStake') }}</button>
+
+        <h3 class="section-title" style="margin-top:28px;" data-i18n="shop.openPits">{{ t('shop.openPits') }}</h3>
+        <div id="open-flips" data-i18n="shop.loadingPit">{{ t('shop.loadingPit') }}</div>
+        <h3 class="section-title" style="margin-top:28px;" data-i18n="shop.knockouts">{{ t('shop.knockouts') }}</h3>
+        <div id="recent-flips" class="muted" data-i18n="shop.noBlood">{{ t('shop.noBlood') }}</div>
+    </div>
+</div>
+
+<div id="tab-trade" class="tab-content">
+    <div class="box" style="max-width: 760px; margin: 0 auto; text-align: left; border-top: 4px solid #FFD700;">
+        <h2 style="margin-top: 0; color: #FFD700; text-align:center;">🔀 <span data-i18n="shop.backAlley">{{ t('shop.backAlley') }}</span></h2>
+        <p class="muted" style="text-align:center;" data-i18n="shop.tradeBody">{{ t('shop.tradeBody') }}</p>
+        <h3 class="section-title" data-i18n="shop.closet">{{ t('shop.closet') }}</h3>
+        <div id="trade-inventory" class="muted" data-i18n="common.loading">{{ t('common.loading') }}</div>
+        <h3 class="section-title" data-i18n="shop.listings">{{ t('shop.listings') }}</h3>
+        <div id="trade-listings" data-i18n="common.loading">{{ t('common.loading') }}</div>
+    </div>
+</div>
+
+<!-- TITLE SET UP MODAL -->
+<div id="title-setup-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+    <div class="box" style="position: relative; width: 90%; max-width: 400px; text-align: center; border: 2px solid #ff4c4c; box-shadow: 0 0 20px rgba(255,76,76,0.3);">
+        <h2 style="color: #ff4c4c; margin-top: 0;">🔥 <span data-i18n="shop.titleUnlocked">{{ t('shop.titleUnlocked') }}</span></h2>
+        <p style="opacity: 0.8; margin-bottom: 20px;"><span data-i18n="shop.titleSetup">{{ t('shop.titleSetup') }}</span><br><span style="font-size: 0.8em; opacity: 0.6;" data-i18n="shop.titleNote">{{ t('shop.titleNote') }}</span></p>
+        
+        <form action="/profile" method="POST">
+            <input type="text" name="custom_title" data-i18n-placeholder="shop.titlePlaceholder" placeholder="{{ t('shop.titlePlaceholder') }}" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ff4c4c; background: rgba(0,0,0,0.5); color: #ff4c4c; font-weight: bold; text-align: center;" required>
+            <button type="submit" style="width: 100%; background: #ff4c4c; color: white;" data-i18n="common.saveEquip">{{ t('common.saveEquip') }}</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function shopT(key, vars) {
+        return (typeof otT === 'function') ? otT(key, vars) : ((window.OTI18n && OTI18n.t(key, vars)) || key);
+    }
+    function rarityLabel(r) {
+        var k = String(r || 'common').toLowerCase();
+        return shopT('rarity.' + k);
+    }
+
+    var BORDER_ITEMS = { hacker:1, gold:1, cosmos:1, giga:1, cyan:1, ember:1, frost:1, void:1, plasma:1, aurora:1, glitch:1, obsidian:1 };
+    var BANNER_ITEMS = { standard:1, pro:1, ultra:1, giga_banner:1, carbon:1, ember_banner:1, frost_banner:1, ion:1, acid_vein:1, aurora_banner:1, velvet:1, molten:1 };
+    var shopState = {
+        borders: {{ (nav_borders or [])|tojson }},
+        banners: {{ (nav_owned_banners or [])|tojson }},
+        activeBorder: {{ (nav_active_border or '')|tojson }},
+        activeBanner: {{ (nav_active_banner or 'default')|tojson }},
+        ownsTitle: {{ (nav_owns_title or false)|tojson }}
+    };
+    var shopMe = {{ (session.get('username') or '')|tojson }};
+    var shopSteam = {{ (user_steam_id or '')|tojson }};
+    var cosmeticLabels = {{ (cosmetic_labels or {})|tojson }};
+
+    function shopKind(item) {
+        if (item === 'title' || item === 'mvp' || item === 'welkin') return item;
+        if (BORDER_ITEMS[item]) return 'border';
+        if (BANNER_ITEMS[item]) return 'banner';
+        return '';
+    }
+    function shopItemFromBtn(btn) {
+        var m = String(btn.getAttribute('onclick') || '').match(/buyItem\('([^']+)'/);
+        return m ? m[1] : '';
+    }
+    function hasOwned(list, item) {
+        return (list || []).indexOf(item) !== -1;
+    }
+    function paintShopButton(btn) {
+        var item = shopItemFromBtn(btn);
+        var kind = shopKind(item);
+        if (!item || kind === 'mvp' || kind === 'welkin') return;
+        var owned = false;
+        var equipped = false;
+        if (kind === 'border') {
+            owned = hasOwned(shopState.borders, item);
+            equipped = owned && shopState.activeBorder === item;
+        } else if (kind === 'banner') {
+            owned = hasOwned(shopState.banners, item);
+            equipped = owned && shopState.activeBanner === item;
+        } else if (kind === 'title') {
+            owned = !!shopState.ownsTitle;
+            equipped = false;
+        }
+        if (!owned) return;
+        btn.removeAttribute('data-i18n');
+        btn.innerText = equipped ? shopT('common.equipped') : shopT('common.owned');
+        btn.style.background = equipped ? '#238636' : '#1f6feb';
+        btn.style.color = '#fff';
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    }
+    function paintAllShopButtons() {
+        document.querySelectorAll('button[onclick*="buyItem("]').forEach(paintShopButton);
+    }
+    function ensureSelectOption(sel, value, label) {
+        if (!sel || value === undefined || value === null) return;
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === value) return;
+        }
+        var opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label || value;
+        sel.appendChild(opt);
+    }
+    function syncShopProfile(data) {
+        if (data) {
+            if (data.borders) shopState.borders = data.borders;
+            if (data.owned_banners) shopState.banners = data.owned_banners;
+            if (data.active_border !== undefined) shopState.activeBorder = data.active_border || '';
+            if (data.active_banner !== undefined) shopState.activeBanner = data.active_banner || 'default';
+            if (data.owns_title !== undefined) shopState.ownsTitle = !!data.owns_title;
+        }
+        paintAllShopButtons();
+        if (typeof applyLiveProfileUpdate === 'function') {
+            applyLiveProfileUpdate({
+                username: data && data.username ? data.username : shopMe,
+                steam_id: data && data.steam_id ? data.steam_id : shopSteam,
+                avatar: data && data.avatar,
+                owns_title: shopState.ownsTitle,
+                custom_title: data && data.custom_title,
+                active_border: shopState.activeBorder,
+                active_banner: shopState.activeBanner,
+                banner_config: data && data.banner_config
+            });
+        }
+        var borderSel = document.getElementById('edit-border-select');
+        if (borderSel) {
+            (shopState.borders || []).forEach(function (b) {
+                ensureSelectOption(borderSel, b, (cosmeticLabels && cosmeticLabels[b]) || b);
+            });
+            if (shopState.activeBorder) borderSel.value = shopState.activeBorder;
+        }
+        var bannerSel = document.getElementById('edit-banner-select');
+        if (bannerSel) {
+            (shopState.banners || []).forEach(function (b) {
+                ensureSelectOption(bannerSel, b, (cosmeticLabels && cosmeticLabels[b]) || b);
+            });
+            if (shopState.activeBanner) bannerSel.value = shopState.activeBanner;
+            if (typeof onEditBannerChange === 'function') onEditBannerChange();
+        }
+        if (typeof onEditBorderChange === 'function') onEditBorderChange();
+        var titleGroup = document.getElementById('edit-title-group');
+        if (titleGroup && shopState.ownsTitle) titleGroup.style.display = 'block';
+    }
+    function openTitleSetup() {
+        document.body.style.overflow = 'hidden';
+        var modal = document.getElementById('title-setup-modal');
+        if (modal) modal.style.display = 'flex';
+    }
+    function buyItem(item, btnId) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        var kind = shopKind(item);
+        if (kind === 'title' && shopState.ownsTitle) {
+            openTitleSetup();
+            return;
+        }
+        const originalText = btn.innerText;
+        btn.innerText = shopT('common.processing');
+        btn.style.opacity = "0.5";
+
+        fetch('/api/buy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ item: item })
+        })
+        .then(response => response.json().then(data => ({ ok: response.ok, data })).catch(() => ({ ok: false, data: { error: shopT('shop.purchaseFailed') } })))
+        .then(({ ok, data }) => {
+            if (ok && data.success) {
+                setBalance(data.new_balance);
+                if (item === 'welkin') {
+                    btn.innerText = 'Extend Welkin';
+                    btn.style.background = 'linear-gradient(90deg,#7ad7ff,#5865F2)';
+                    btn.style.color = '#111';
+                    btn.style.opacity = '1';
+                    return;
+                }
+                if (item === 'mvp') {
+                    btn.innerText = originalText;
+                    btn.style.opacity = '1';
+                    return;
+                }
+                if (item === 'title') {
+                    shopState.ownsTitle = true;
+                    openTitleSetup();
+                }
+                syncShopProfile(data);
+                btn.style.opacity = '1';
+            } else {
+                var err = data.error || '';
+                document.getElementById('shop-error-message').innerText =
+                    (err === 'Not enough OC') ? shopT('shop.notEnough')
+                    : (err === 'Already owned') ? shopT('common.owned')
+                    : (err || shopT('shop.purchaseFailed'));
+                document.getElementById('shop-error-modal').style.display = 'flex';
+                btn.innerText = originalText;
+                btn.style.opacity = "1";
+            }
+        })
+        .catch(() => {
+            document.getElementById('shop-error-message').innerText = shopT('shop.shopUnreachable');
+            document.getElementById('shop-error-modal').style.display = 'flex';
+            btn.innerText = originalText;
+            btn.style.opacity = "1";
+        });
+    }
+    function bootShopOwned() {
+        paintAllShopButtons();
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootShopOwned);
+    else bootShopOwned();
+    document.addEventListener('ot-lang-change', bootShopOwned);
+
+    function shopError(msg) {
+        document.getElementById('shop-error-message').innerText = msg || shopT('shop.genericError');
+        document.getElementById('shop-error-modal').style.display = 'flex';
+    }
+    function setBalance(n) {
+        if (n === undefined || n === null) return;
+        document.querySelectorAll('.js-oc-balance').forEach(el => { el.innerText = n; });
+        const el = document.getElementById('user-balance-display');
+        if (el) el.innerText = n;
+    }
+    function openShopTab(tabId, btnElement) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        const tab = document.getElementById(tabId);
+        if (tab) tab.classList.add('active');
+        if (btnElement) btnElement.classList.add('active');
+        const hashMap = { 'tab-market': 'market', 'tab-crates': 'crates', 'tab-casino': 'casino', 'tab-trade': 'trade' };
+        if (hashMap[tabId]) history.replaceState(null, '', '#' + hashMap[tabId]);
+        if (tabId === 'tab-casino') refreshFlips();
+        if (tabId === 'tab-trade') refreshMarket();
+    }
+
+    const CASINO_STAKES = [5, 10, 20, 50, 100, 250, 500];
+    let selectedCasinoStake = 10;
+    let selectedFlipSide = 'heads';
+    let casinoBusy = false;
+    let crateBusy = false;
+
+    function selectCasinoStake(stake) {
+        if (casinoBusy || CASINO_STAKES.indexOf(stake) === -1) return;
+        selectedCasinoStake = stake;
+        document.querySelectorAll('.casino-stake-btn').forEach(btn => {
+            btn.classList.toggle('active', Number(btn.getAttribute('data-stake')) === stake);
+        });
+    }
+    function selectFlipSide(side) {
+        if (casinoBusy) return;
+        selectedFlipSide = side;
+        document.getElementById('side-heads').classList.toggle('active', side === 'heads');
+        document.getElementById('side-tails').classList.toggle('active', side === 'tails');
+        const coin = document.getElementById('ore-coin');
+        coin.classList.remove('spinning');
+        coin.style.transform = side === 'tails' ? 'rotateY(180deg)' : 'rotateY(0deg)';
+    }
+    function animateCoinTo(side) {
+        const coin = document.getElementById('ore-coin');
+        coin.classList.add('spinning');
+        window.setTimeout(function () {
+            coin.classList.remove('spinning');
+            coin.style.transform = side === 'tails' ? 'rotateY(1800deg)' : 'rotateY(1620deg)';
+        }, 900);
+    }
+    function flipRowHtml(f) {
+        const creator = (f.creator && f.creator.username) || '???';
+        const side = (f.creator_side || '').toUpperCase();
+        let action = '';
+        if (f.can_join) action = '<button type="button" style="margin:0;background:#FFD700;color:#111;" onclick="joinFlip(' + f.id + ')">' + shopT('common.join') + ' ' + f.stake + '</button>';
+        else if (f.can_cancel) action = '<button type="button" style="margin:0;background:#ff4c4c;" onclick="cancelFlip(' + f.id + ')">' + shopT('common.cancel') + '</button>';
+        else action = '<span class="muted">' + shopT('common.waiting') + '</span>';
+        return '<div class="flip-row"><div><strong onclick="openPlayerCard(' + JSON.stringify(creator) + ')" style="cursor:pointer;">' + creator + '</strong> · ' + side + '<div class="muted">' + f.stake + ' OC · ' + shopT('shop.pot') + ' ' + f.pot + '</div></div>' + action + '</div>';
+    }
+    function refreshFlips() {
+        fetch('/api/casino/list', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                const ashes = document.getElementById('pit-ashes');
+                ashes.removeAttribute('data-i18n');
+                ashes.innerText = shopT('shop.ashesBurned', { n: data.pit_ashes || 0 });
+                const openEl = document.getElementById('open-flips');
+                openEl.removeAttribute('data-i18n');
+                if (!data.open || !data.open.length) openEl.innerHTML = '<p class="muted">' + shopT('shop.pitEmpty') + '</p>';
+                else openEl.innerHTML = data.open.map(flipRowHtml).join('');
+                const recEl = document.getElementById('recent-flips');
+                recEl.removeAttribute('data-i18n');
+                if (!data.recent || !data.recent.length) recEl.innerHTML = shopT('shop.noBlood');
+                else recEl.innerHTML = data.recent.map(f => {
+                    const res = (f.result_side || '').toUpperCase();
+                    return '<div class="flip-row"><div>' + ((f.creator && f.creator.username) || '?') + ' ' + shopT('common.vs') + ' ' + ((f.joiner && f.joiner.username) || '?') + '<div class="muted">' + res + ' · ' + (f.winner || '???') + ' +' + f.payout + ' OC</div></div></div>';
+                }).join('');
+            }).catch(() => {});
+    }
+    function createFlip() {
+        if (casinoBusy) return;
+        casinoBusy = true;
+        const btn = document.getElementById('flip-create-btn');
+        btn.disabled = true;
+        fetch('/api/casino/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stake: selectedCasinoStake, side: selectedFlipSide })
+        })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || !data.success) shopError(data.error || shopT('shop.openPitFail'));
+            else {
+                setBalance(data.new_balance);
+                document.getElementById('flip-result').innerText = data.message || shopT('shop.pitOpened');
+            }
+            refreshFlips();
+        })
+        .catch(() => shopError(shopT('shop.pitUnreachable')))
+        .finally(() => { casinoBusy = false; btn.disabled = false; });
+    }
+    function joinFlip(id) {
+        if (casinoBusy) return;
+        casinoBusy = true;
+        document.getElementById('flip-result').innerText = shopT('shop.coinAir');
+        fetch('/api/casino/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ flip_id: id })
+        })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || !data.success) {
+                shopError(data.error || shopT('shop.joinFailed'));
+                casinoBusy = false;
+                return;
+            }
+            setBalance(data.new_balance);
+            animateCoinTo(data.result_side);
+            window.setTimeout(function () {
+                document.getElementById('flip-result').innerText = data.message || '';
+                if (data.won && typeof confetti === 'function') confetti({ particleCount: 160, spread: 80, origin: { y: 0.6 }, zIndex: 999999 });
+                casinoBusy = false;
+                refreshFlips();
+            }, 1100);
+        })
+        .catch(() => { shopError(shopT('shop.joinUnreachable')); casinoBusy = false; });
+    }
+    function cancelFlip(id) {
+        fetch('/api/casino/cancel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ flip_id: id })
+        })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || !data.success) shopError(data.error || shopT('shop.cancelFailed'));
+            else setBalance(data.new_balance);
+            refreshFlips();
+        });
+    }
+
+    function openCrate() {
+        if (crateBusy) return;
+        crateBusy = true;
+        const btn = document.getElementById('crate-open-btn');
+        const crate = document.getElementById('ore-crate');
+        const reveal = document.getElementById('crate-reveal');
+        btn.disabled = true;
+        btn.innerText = shopT('shop.cracking');
+        crate.classList.add('shake');
+        reveal.style.display = 'none';
+        fetch('/api/crate/open', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            window.setTimeout(function () {
+                crate.classList.remove('shake');
+                if (!ok || !data.success) {
+                    shopError(data.error || shopT('shop.crateJammed'));
+                    btn.disabled = false;
+                    btn.innerText = shopT('shop.crackCrate');
+                    crateBusy = false;
+                    return;
+                }
+                setBalance(data.new_balance);
+                const drop = data.drop || {};
+                reveal.className = drop.rarity || 'common';
+                document.getElementById('crate-rarity').innerText = drop.duplicate ? (rarityLabel(drop.rarity) + ' · ' + shopT('shop.duplicate')) : rarityLabel(drop.rarity);
+                document.getElementById('crate-drop').innerText = drop.label || '???';
+                const preview = document.getElementById('crate-drop-preview');
+                preview.innerHTML = '';
+                if (drop.kind === 'banner' && drop.key) {
+                    const el = document.createElement('div');
+                    el.id = 'crate-banner-preview';
+                    el.className = 'shop-banner-preview';
+                    preview.appendChild(el);
+                    renderBanner('crate-banner-preview', drop.key, '{}', '#111', true);
+                }
+                reveal.style.display = 'block';
+                if (drop.rarity === 'secret' && typeof confetti === 'function') {
+                    confetti({ particleCount: 240, spread: 90, origin: { y: 0.55 }, zIndex: 999999 });
+                }
+                btn.disabled = false;
+                btn.innerText = shopT('shop.crackCrate');
+                crateBusy = false;
+            }, 750);
+        })
+        .catch(() => {
+            crate.classList.remove('shake');
+            shopError(shopT('shop.crateUnreachable'));
+            btn.disabled = false;
+            btn.innerText = shopT('shop.crackCrate');
+            crateBusy = false;
+        });
+    }
+
+    function refreshMarket() {
+        fetch('/api/market/list', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                const inv = document.getElementById('trade-inventory');
+                inv.removeAttribute('data-i18n');
+                if (!data.inventory || !data.inventory.length) inv.innerHTML = '<p class="muted">' + shopT('shop.emptyCloset') + '</p>';
+                else inv.innerHTML = data.inventory.map(item => {
+                    if (item.listed) return '<div class="flip-row"><div>' + item.label + ' <span class="muted">(' + item.type + ')</span></div><span class="muted">' + shopT('common.listed') + '</span></div>';
+                    return '<div class="flip-row"><div>' + item.label + ' <span class="muted">(' + item.type + ')</span></div><span><input type="number" min="1" max="9999" value="25" id="price-' + item.type + '-' + item.key + '" style="width:80px;margin:0 8px 0 0;"> <button type="button" style="margin:0;background:#FFD700;color:#111;" onclick="listItem(\'' + item.type + '\',\'' + item.key + '\')">' + shopT('common.list') + '</button></span></div>';
+                }).join('');
+                const list = document.getElementById('trade-listings');
+                list.removeAttribute('data-i18n');
+                if (!data.listings || !data.listings.length) list.innerHTML = '<p class="muted">' + shopT('shop.alleyQuiet') + '</p>';
+                else list.innerHTML = data.listings.map(l => {
+                    const act = l.is_mine
+                        ? '<button type="button" style="margin:0;background:#ff4c4c;" onclick="cancelListing(' + l.id + ')">' + shopT('common.pull') + '</button>'
+                        : '<button type="button" style="margin:0;background:#FFD700;color:#111;" onclick="buyListing(' + l.id + ')">' + shopT('common.buy') + ' ' + l.price + '</button>';
+                    return '<div class="flip-row"><div><strong>' + l.label + '</strong> <span class="muted">' + l.item_type + '</span><div class="muted">' + shopT('shop.bySeller', { user: l.seller, price: l.price }) + '</div></div>' + act + '</div>';
+                }).join('');
+            }).catch(() => {});
+    }
+    function listItem(type, key) {
+        const input = document.getElementById('price-' + type + '-' + key);
+        const price = input ? Number(input.value) : 25;
+        fetch('/api/market/sell', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ item_type: type, item_key: key, price: price })
+        }).then(r => r.json().then(data => ({ ok: r.ok, data }))).then(({ ok, data }) => {
+            if (!ok || !data.success) shopError(data.error || shopT('shop.listFail'));
+            refreshMarket();
+        });
+    }
+    function buyListing(id) {
+        fetch('/api/market/buy', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listing_id: id })
+        }).then(r => r.json().then(data => ({ ok: r.ok, data }))).then(({ ok, data }) => {
+            if (!ok || !data.success) shopError(data.error || shopT('shop.buyFailed'));
+            else setBalance(data.new_balance);
+            refreshMarket();
+        });
+    }
+    function cancelListing(id) {
+        fetch('/api/market/cancel', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listing_id: id })
+        }).then(r => r.json()).then(() => refreshMarket());
+    }
+
+    (function bootShop() {
+        const hash = (location.hash || '').replace('#', '');
+        const map = { market: 'tab-market', crates: 'tab-crates', casino: 'tab-casino', coinflip: 'tab-casino', trade: 'tab-trade' };
+        const tab = map[hash];
+        if (tab) {
+            const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => (b.getAttribute('onclick') || '').indexOf(tab) >= 0);
+            openShopTab(tab, btn || document.querySelector('.tab-btn'));
+        }
+        refreshFlips();
+        function paintShopDaily(d) {
+            const btn = document.getElementById('shop-daily-btn');
+            if (!btn || !d) return;
+            btn.removeAttribute('data-i18n');
+            if (!d.available) { btn.disabled = true; btn.innerText = shopT('daily.claimedStreak', { n: d.streak || 0 }); btn.style.opacity = '0.55'; }
+            else btn.innerText = shopT('daily.availableStreak', { n: d.streak || 0 });
+        }
+        fetch('/api/daily/status', { credentials: 'same-origin' }).then(r => r.json()).then(function (d) {
+            paintShopDaily(d);
+        }).catch(() => {});
+        window.setInterval(function () {
+            const casinoTab = document.getElementById('tab-casino');
+            if (casinoTab && casinoTab.classList.contains('active')) refreshFlips();
+        }, 5000);
+        document.addEventListener('ot-lang-change', function () {
+            const casinoTab = document.getElementById('tab-casino');
+            const tradeTab = document.getElementById('tab-trade');
+            if (casinoTab && casinoTab.classList.contains('active')) refreshFlips();
+            if (tradeTab && tradeTab.classList.contains('active')) refreshMarket();
+            fetch('/api/daily/status', { credentials: 'same-origin' }).then(r => r.json()).then(paintShopDaily).catch(() => {});
+        });
+    })();
+</script>
+
+{% endblock %}

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .rv-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: #ff4c4c; opacity: 0.9; margin: 0 0 6px;
+    }
+    .rv-hero {
+        position: relative; overflow: hidden; border-radius: 18px; padding: 28px 24px 24px;
+        margin-bottom: 22px; text-align: left;
+        background:
+            radial-gradient(ellipse at 8% 0%, rgba(255,76,76,0.28), transparent 48%),
+            radial-gradient(ellipse at 92% 10%, rgba(255,215,0,0.16), transparent 42%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 90%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, #ff4c4c 45%, transparent);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 16px 40px rgba(0,0,0,0.35);
+    }
+    .rv-hero h1 { margin: 0 0 8px; color: #ff4c4c; text-shadow: 0 0 22px rgba(255,76,76,0.55); }
+    .rv-hero::after {
+        content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.12;
+        background: repeating-linear-gradient(180deg, transparent 0 3px, #000 3px 4px);
+    }
+    .rv-lockin {
+        max-width: 760px; margin: 0 auto 22px; text-align: left; position: relative;
+        background:
+            radial-gradient(ellipse at 50% -20%, rgba(255,76,76,0.16), transparent 55%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 92%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, #ff4c4c 40%, transparent);
+        box-shadow: 0 16px 36px rgba(0,0,0,0.35);
+    }
+    .rv-lockin::before {
+        content: ''; position: absolute; inset: 0 0 auto; height: 3px;
+        background: linear-gradient(90deg, #ff4c4c, #FFD700, #ff4c4c);
+        box-shadow: 0 0 16px #ff4c4c;
+    }
+    .rv-lockin .armory-form { margin-top: 8px; }
+    .rv-throw {
+        grid-column: span 2; background: linear-gradient(180deg, #ff6a6a, #c62828); color: #fff;
+        font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase;
+        box-shadow: 0 8px 22px rgba(255,76,76,0.35);
+    }
+    .rv-throw:hover { transform: translateY(-2px); }
+
+    .rival-stage { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: stretch; }
+    .vs-chip {
+        align-self: center; font-size: 2.4em; font-weight: 900; color: #ff4c4c;
+        text-shadow: 0 0 18px rgba(255,76,76,0.5);
+        padding: 10px 6px; letter-spacing: 0.08em;
+    }
+    .rival-card {
+        text-align: center; min-height: 280px; margin: 0;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 55%, transparent), rgba(0,0,0,0.32));
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+        position: relative; overflow: hidden;
+    }
+    .rival-card::before {
+        content: ''; position: absolute; inset: 0 0 auto; height: 3px;
+        background: #ff4c4c; box-shadow: 0 0 16px #ff4c4c;
+    }
+    .rival-card.win {
+        border: 2px solid #FFD700; box-shadow: 0 0 22px rgba(255,215,0,0.25);
+        background:
+            radial-gradient(circle at 50% 0%, rgba(255,215,0,0.18), transparent 55%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 55%, transparent), rgba(0,0,0,0.32));
+    }
+    .rival-card.win::before { background: #FFD700; box-shadow: 0 0 16px #FFD700; }
+    .rival-card.lose { opacity: 0.72; filter: grayscale(0.35); }
+    .rv-avatar {
+        width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+        border: 2px solid var(--accent); cursor: pointer;
+        box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .rival-card.win .rv-avatar { border-color: #FFD700; box-shadow: 0 0 22px rgba(255,215,0,0.5); }
+    .rv-name { margin: 10px 0 4px; cursor: pointer; }
+    .rv-hours { font-size: 2em; font-weight: 900; color: #FFD700; text-shadow: 0 0 16px rgba(255,215,0,0.35); }
+    .rv-sub { margin-bottom: 6px; }
+    .rv-life { margin-bottom: 10px; font-size: 0.85em; }
+    .rv-game {
+        display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; text-align: left;
+        padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .rv-game strong { color: #66c0f4; }
+    .roast-box {
+        max-width: 760px; margin: 22px auto 0; text-align: center;
+        border-top: 4px solid #ff4c4c;
+        background:
+            radial-gradient(ellipse at 50% 0%, rgba(255,76,76,0.14), transparent 55%),
+            var(--bg-box);
+    }
+    @media (max-width: 800px) {
+        .rival-stage { grid-template-columns: 1fr; }
+        .vs-chip { font-size: 1.6em; padding: 0; }
+        .rv-throw { grid-column: auto; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .rv-throw:hover { transform: none; }
+    }
+</style>
+
+<div class="rv-hero">
+    <div class="page-header" style="margin: 0; position: relative; z-index: 1;">
+        <p class="rv-kicker" data-i18n="rivals.kicker">{{ t('rivals.kicker') }}</p>
+        <h1>⚔️ <span data-i18n="rivals.title">{{ t('rivals.title') }}</span></h1>
+        <p class="page-sub" data-i18n="rivals.sub">{{ t('rivals.sub') }}</p>
+    </div>
+</div>
+
+<div class="box rv-lockin">
+    <p class="rv-kicker" data-i18n="rivals.lockIn">{{ t('rivals.lockIn') }}</p>
+    <h2 style="margin-top: 0;" data-i18n="rivals.statCheck">{{ t('rivals.statCheck') }}</h2>
+    <div class="armory-form">
+        <div>
+            <label class="form-label" data-i18n="rivals.challengerA">{{ t('rivals.challengerA') }}</label>
+            <select id="rival-a" style="width:100%;">
+                <option value="" data-i18n="rivals.pickOretimer">{{ t('rivals.pickOretimer') }}</option>
+                {% for u in steam_users %}
+                <option value="{{ u.username }}">{{ u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label" data-i18n="rivals.challengerB">{{ t('rivals.challengerB') }}</label>
+            <select id="rival-b" style="width:100%;">
+                <option value="" data-i18n="rivals.pickVictim">{{ t('rivals.pickVictim') }}</option>
+                {% for u in steam_users %}
+                <option value="{{ u.username }}">{{ u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="button" class="btn-full rv-throw" onclick="runStatCheck()" data-i18n="rivals.throwHands">{{ t('rivals.throwHands') }}</button>
+    </div>
+    {% if not steam_users %}
+    <p class="muted" style="margin-top:12px;" data-i18n="rivals.noSteam">{{ t('rivals.noSteam') }}</p>
+    {% endif %}
+</div>
+
+<div id="rival-result" style="display:none;">
+    <div class="rival-stage">
+        <div id="card-a" class="box rival-card"></div>
+        <div class="vs-chip" data-i18n="common.vs">{{ t('common.vs') }}</div>
+        <div id="card-b" class="box rival-card"></div>
+    </div>
+    <div id="roast" class="box roast-box">
+        <p class="rv-kicker" data-i18n="rivals.ringside">{{ t('rivals.ringside') }}</p>
+        <h2 style="margin-top:0; color:#ff4c4c;" data-i18n="rivals.verdict">{{ t('rivals.verdict') }}</h2>
+        <p id="roast-text" style="font-size:1.2em; font-weight:800; line-height:1.5;"></p>
+    </div>
+</div>
+
+<script>
+function rivalCardHtml(p) {
+    const tt = function (k, v) { return (window.OTI18n && OTI18n.t(k, v)) || k; };
+    const games = (p.top || []).map(g => '<div class="rv-game"><span>' + (g.name || '???') + '</span><strong>' + (g.hours_2w || '0m') + '</strong></div>').join('') || '<div class="muted">' + tt('rivals.noPlaytime') + '</div>';
+    return '<p class="rv-kicker">' + tt('rivals.fighter') + '</p>' +
+        '<img class="rv-avatar" src="' + (p.avatar || '') + '" onclick=\'openPlayerCard(' + JSON.stringify(p.username) + ')\'>' +
+        '<h2 class="rv-name" onclick=\'openPlayerCard(' + JSON.stringify(p.username) + ')\'>' + p.username + '</h2>' +
+        '<div class="rv-hours">' + p.hours_label + '</div>' +
+        '<div class="muted rv-sub">' + tt('rivals.last2weeks') + '</div>' +
+        '<div class="muted rv-life">' + tt('rivals.lifetime', { hours: (p.hours_total || '0m') }) + '</div>' +
+        '<div class="rv-loadout">' + games + '</div>';
+}
+function runStatCheck() {
+    const a = document.getElementById('rival-a').value;
+    const b = document.getElementById('rival-b').value;
+    if (!a || !b || a === b) { oreAlert((window.OTI18n && OTI18n.t('rivals.pickTwo')) || 'Pick two different people.'); return; }
+    fetch('/api/rivals/compare?a=' + encodeURIComponent(a) + '&b=' + encodeURIComponent(b), { credentials: 'same-origin' })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || !data.success) { oreAlert(data.error || ((window.OTI18n && OTI18n.t('rivals.failed')) || 'Stat-check failed')); return; }
+            document.getElementById('rival-result').style.display = 'block';
+            document.getElementById('card-a').innerHTML = rivalCardHtml(data.a);
+            document.getElementById('card-b').innerHTML = rivalCardHtml(data.b);
+            document.getElementById('card-a').className = 'box rival-card' + (data.winner === 'a' ? ' win' : (data.winner === 'b' ? ' lose' : ''));
+            document.getElementById('card-b').className = 'box rival-card' + (data.winner === 'b' ? ' win' : (data.winner === 'a' ? ' lose' : ''));
+            document.getElementById('roast-text').innerText = data.roast || '';
+            if (typeof confetti === 'function') confetti({ particleCount: 90, spread: 60, origin: { y: 0.65 } });
+        });
+}
+</script>
+{% endblock %}

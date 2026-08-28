@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .hl-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: #FFD700; opacity: 0.9; margin: 0 0 6px;
+    }
+    .hl-hero {
+        position: relative; overflow: hidden; border-radius: 18px; padding: 28px 24px 24px;
+        margin-bottom: 22px; text-align: left;
+        background:
+            radial-gradient(ellipse at 14% 0%, rgba(255,215,0,0.2), transparent 52%),
+            radial-gradient(ellipse at 88% 0%, rgba(255,76,76,0.14), transparent 46%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 90%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, #FFD700 38%, transparent);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 16px 40px rgba(0,0,0,0.35);
+    }
+    .hl-hero h1 { margin: 0 0 8px; color: #FFD700; text-shadow: 0 0 18px rgba(255,215,0,0.4); }
+    .hl-live {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 4px 10px; border-radius: 999px; margin-bottom: 10px;
+        background: rgba(255,76,76,0.16); border: 1px solid rgba(255,76,76,0.45);
+        color: #ff8a8a; font-size: 0.72em; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .hl-live i {
+        width: 8px; height: 8px; border-radius: 50%; background: #ff4c4c;
+        box-shadow: 0 0 0 0 rgba(255,76,76,0.7); animation: hl-ping 1.6s ease-out infinite;
+        font-style: normal;
+    }
+    @keyframes hl-ping {
+        0% { box-shadow: 0 0 0 0 rgba(255,76,76,0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(255,76,76,0); }
+        100% { box-shadow: 0 0 0 0 rgba(255,76,76,0); }
+    }
+
+    .hl-cotw {
+        text-align: left; position: relative; overflow: hidden;
+        border: 2px solid #FFD700; box-shadow: 0 0 18px rgba(255,215,0,0.2);
+        background:
+            radial-gradient(ellipse at 50% -10%, rgba(255,215,0,0.14), transparent 55%),
+            var(--bg-box);
+    }
+    .hl-cotw::before {
+        content: ''; position: absolute; inset: 0 0 auto; height: 3px;
+        background: #FFD700; box-shadow: 0 0 16px #FFD700;
+    }
+    .hl-booth {
+        max-width: 640px; margin: 0 auto 28px; text-align: left;
+        background:
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 92%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+        box-shadow: 0 16px 36px rgba(0,0,0,0.35);
+        position: relative;
+    }
+    .hl-booth::before {
+        content: ''; position: absolute; inset: 0 0 auto; height: 3px;
+        background: var(--accent); box-shadow: 0 0 16px var(--accent);
+    }
+
+    .hl-reel {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;
+    }
+    .hl-clip {
+        margin: 0; text-align: left; position: relative; overflow: hidden;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 55%, transparent), rgba(0,0,0,0.32));
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+    }
+    .hl-clip::before {
+        content: ''; position: absolute; inset: 0 0 auto; height: 3px;
+        background: var(--accent); box-shadow: 0 0 16px var(--accent);
+    }
+    .hl-clip-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .hl-clip-head img {
+        width: 36px; height: 36px; border-radius: 50%; object-fit: cover; cursor: pointer;
+        border: 2px solid var(--accent);
+    }
+    .hl-platform {
+        font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .hl-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+    .hl-empty { grid-column: 1 / -1; }
+    @media (prefers-reduced-motion: reduce) {
+        .hl-live i { animation: none; }
+    }
+</style>
+
+<div class="hl-hero">
+    <div class="page-header" style="margin: 0;">
+        <span class="hl-live"><i></i> <span data-i18n="highlights.onAir">{{ t('highlights.onAir') }}</span></span>
+        <p class="hl-kicker" data-i18n="highlights.kicker" data-i18n-vars='{{ {"week": week_id} | tojson }}'>{{ t('highlights.kicker', week=week_id) }}</p>
+        <h1>🎬 <span data-i18n="highlights.title">{{ t('highlights.title') }}</span></h1>
+        <p class="page-sub" data-i18n="highlights.sub" data-i18n-vars='{{ {"week": week_id, "oc": clip_reward} | tojson }}'>{{ t('highlights.sub', week=week_id, oc=clip_reward) }}</p>
+    </div>
+</div>
+
+{% if cotw %}
+<div class="box hl-cotw">
+    <p class="hl-kicker" style="color:#FFD700;" data-i18n="highlights.cotw" data-i18n-vars='{{ {"week": week_id} | tojson }}'>{{ t('highlights.cotw', week=week_id) }}</p>
+    <div class="muted" style="font-size:0.75em; letter-spacing:0.14em; text-transform:uppercase; font-weight:800; color:#FFD700;" data-i18n="highlights.nowPlaying">{{ t('highlights.nowPlaying') }}</div>
+    <h2 style="margin:6px 0 10px;">{{ cotw.title }}</h2>
+    <p class="muted" style="margin-top:0;"><span data-i18n="highlights.leading">{{ t('highlights.leading') }}</span> <strong onclick='openPlayerCard({{ cotw.username | tojson }})' style="cursor:pointer; color:var(--accent);">{{ cotw.username }}</strong> · 🔥 {{ cotw.likes }}</p>
+    {% if cotw.embed_url %}
+        <iframe class="clip-embed" src="{{ cotw.embed_url }}" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"></iframe>
+    {% else %}
+        <a href="{{ cotw.url }}" target="_blank" rel="noopener noreferrer"><button class="btn-ghost" data-i18n="highlights.openClip">{{ t('highlights.openClip') }}</button></a>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="box hl-booth">
+    <p class="hl-kicker" data-i18n="highlights.submit">{{ t('highlights.submit') }}</p>
+    <h2 style="margin-top:0;" data-i18n="highlights.paste">{{ t('highlights.paste') }}</h2>
+    <form method="POST" class="form-stack">
+        <div>
+            <label class="form-label" data-i18n="highlights.titleLabel">{{ t('highlights.titleLabel') }}</label>
+            <input type="text" name="title" maxlength="80" data-i18n-placeholder="highlights.titleHint" placeholder="{{ t('highlights.titleHint') }}">
+        </div>
+        <div>
+            <label class="form-label" data-i18n="highlights.url">{{ t('highlights.url') }}</label>
+            <input type="url" name="url" required placeholder="https://youtu.be/... or twitch / medal.tv">
+        </div>
+        <button type="submit" class="btn-full" data-i18n="highlights.dropClip">{{ t('highlights.dropClip') }}</button>
+    </form>
+</div>
+
+<div class="hl-reel">
+    {% for c in clips %}
+    <div class="box hl-clip">
+        <div class="hl-clip-head">
+            <img src="{{ c.avatar }}" alt="" onclick='openPlayerCard({{ c.username | tojson }})'>
+            <div>
+                <strong onclick='openPlayerCard({{ c.username | tojson }})' style="cursor:pointer;">{{ c.username }}</strong>
+                <div class="muted hl-platform">{{ c.platform }}</div>
+            </div>
+        </div>
+        <h3 style="margin:0 0 10px;">{{ c.title }}</h3>
+        {% if c.embed_url %}
+            <iframe class="clip-embed" src="{{ c.embed_url }}" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"></iframe>
+        {% else %}
+            <a href="{{ c.url }}" target="_blank" rel="noopener noreferrer" style="display:block; padding:16px; border-radius:10px; border:1px dashed var(--accent); text-decoration:none; color:var(--text-main);">
+                <div style="font-weight:800; color:var(--accent);" data-i18n="highlights.linkPreview">{{ t('highlights.linkPreview') }}</div>
+                <div class="muted" style="word-break:break-all; margin-top:6px;">{{ c.url }}</div>
+            </a>
+        {% endif %}
+        <div class="hl-foot">
+            <span style="font-weight:900;" id="clip-likes-{{ c.id }}">🔥 {{ c.likes }}</span>
+            <button type="button" id="clip-btn-{{ c.id }}" onclick="likeClip({{ c.id }})" {% if c.liked %}disabled{% endif %} style="margin:0;{% if c.liked %} background:#238636;{% endif %}">
+                {% if c.liked %}<span data-i18n="highlights.fired">{{ t('highlights.fired') }}</span>{% else %}🔥 <span data-i18n="highlights.like">{{ t('highlights.like') }}</span>{% endif %}
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="box hl-empty"><p class="muted" data-i18n="highlights.empty">{{ t('highlights.empty') }}</p></div>
+    {% endfor %}
+</div>
+
+<script>
+function likeClip(id) {
+    const btn = document.getElementById('clip-btn-' + id);
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    fetch('/api/highlights/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id })
+    }).then(r => r.json().then(data => ({ ok: r.ok, data }))).then(({ ok, data }) => {
+        if (!ok || !data.success) {
+            btn.disabled = false;
+            oreAlert(data.error || ((window.OTI18n && OTI18n.t('highlights.alreadyLiked')) || 'Already liked'));
+            return;
+        }
+        document.getElementById('clip-likes-' + id).innerText = '🔥 ' + data.likes;
+        btn.innerText = (window.OTI18n && OTI18n.t('highlights.fired')) || 'Fired';
+        btn.style.background = '#238636';
+    }).catch(() => { btn.disabled = false; });
+}
+</script>
+{% endblock %}

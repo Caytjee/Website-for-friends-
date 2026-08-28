@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .wo-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: #ff4c4c; margin: 0 0 6px;
+    }
+    .wo-hero {
+        position: relative; overflow: hidden; border-radius: 18px; padding: 8px 0 6px; margin-bottom: 8px;
+    }
+    .wo-hero::before {
+        content: ''; position: absolute; inset: -20%; pointer-events: none; opacity: 0.35;
+        background: conic-gradient(from 0deg, transparent, rgba(255,76,76,0.35), transparent 40%);
+        animation: wo-spin 9s linear infinite;
+    }
+    @keyframes wo-spin { to { transform: rotate(360deg); } }
+    .wo-board {
+        max-width: 540px; margin: 0 auto 36px auto; text-align: left; position: relative;
+        border: 2px solid #ff4c4c; box-shadow: 0 0 28px rgba(255,76,76,0.28);
+        background: linear-gradient(180deg, #2a0808, var(--bg-box));
+        animation: wo-pulse 2.6s ease-in-out infinite;
+    }
+    @keyframes wo-pulse {
+        0%, 100% { box-shadow: 0 0 16px rgba(255,76,76,0.18); }
+        50% { box-shadow: 0 0 32px rgba(255,76,76,0.4); }
+    }
+    .wo-scan {
+        position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #ff4c4c, transparent);
+        animation: wo-scan 2.8s linear infinite; pointer-events: none; opacity: 0.8;
+    }
+    @keyframes wo-scan { from { top: 0; } to { top: 100%; } }
+    .wo-grid { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
+    .wo-card.watchout-card {
+        width: min(320px, 100%); background: linear-gradient(145deg, #3a0a0a, var(--bg-box));
+        box-shadow: 0 0 0 1px rgba(255,76,76,0.45), 0 12px 28px rgba(0,0,0,0.35);
+    }
+    .wo-ring {
+        position: absolute; top: 18px; left: 18px; width: 14px; height: 14px; border-radius: 50%;
+        background: #ff4c4c; box-shadow: 0 0 0 0 rgba(255,76,76,0.7);
+        animation: wo-ping 1.6s ease-out infinite;
+    }
+    @keyframes wo-ping {
+        0% { box-shadow: 0 0 0 0 rgba(255,76,76,0.7); }
+        70% { box-shadow: 0 0 0 12px rgba(255,76,76,0); }
+        100% { box-shadow: 0 0 0 0 rgba(255,76,76,0); }
+    }
+    .wo-card h3 { padding-left: 22px; }
+    .wo-empty { font-style: italic; padding: 18px; border: 1px dashed rgba(255,76,76,0.4); border-radius: 12px; }
+    @media (prefers-reduced-motion: reduce) {
+        .wo-hero::before, .wo-board, .wo-scan, .wo-ring { animation: none; }
+    }
+</style>
+
+<div class="wo-hero">
+    <div class="page-header" style="position: relative; z-index: 1;">
+        <p class="wo-kicker" data-i18n="watchout.kicker">{{ t('watchout.kicker') }}</p>
+        <h1 style="color: #ff4c4c; text-shadow: 0 0 15px rgba(255,76,76,0.8);">🚨 <span data-i18n="watchout.title">{{ t('watchout.title') }}</span></h1>
+        <p class="page-sub" data-i18n="watchout.sub">{{ t('watchout.sub') }}</p>
+    </div>
+</div>
+
+<div class="box wo-board">
+    <div class="wo-scan"></div>
+    <p class="wo-kicker" data-i18n="watchout.transmit">{{ t('watchout.transmit') }}</p>
+    <form method="POST" class="form-stack">
+        <label class="form-label" style="color: var(--text-main);" data-i18n="watchout.whatPlay">{{ t('watchout.whatPlay') }}</label>
+        <select name="game" style="border: 1px solid #ff4c4c;" required>
+            <option value="" data-i18n="watchout.chooseGame">{{ t('watchout.chooseGame') }}</option>
+            {% for game in games %}
+                <option value="{{ game }}">{{ game }}</option>
+            {% endfor %}
+            <option value="Something Else" data-i18n="common.somethingElse">{{ t('common.somethingElse') }}</option>
+        </select>
+        <button type="submit" class="btn-full" style="background: #ff4c4c; color: white;">🔥 <span data-i18n="watchout.lightBeacon">{{ t('watchout.lightBeacon') }}</span></button>
+    </form>
+</div>
+
+<div class="wo-grid">
+{% for b in active_beacons %}
+    <div class="box watchout-card wo-card">
+        <div class="wo-ring" aria-hidden="true"></div>
+        <div style="position: absolute; top: -10px; right: -10px; font-size: 4em; opacity: 0.1; pointer-events: none;">🚨</div>
+
+        <strong style="color: #ff4c4c; font-size: 1.25em; display: block; padding-left: 22px;">
+            <span onclick='openPlayerCard({{ b.username | tojson }})' style="cursor: pointer; transition: 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='#ff4c4c'">{{ b.username }}</span>
+        </strong>
+
+        <span class="muted" style="font-size: 0.9em; padding-left: 22px; display: block;" data-i18n="watchout.lookingIn">{{ t('watchout.lookingIn') }}</span>
+        <h3 style="margin: 6px 0 0 0; color: white;">{{ b.game }}</h3>
+
+        {% if session.get('username') == b.username %}
+        <form action="/delete_watchout/{{ b.id }}" method="POST" style="position: absolute; top: 15px; right: 15px; z-index: 10;">
+            <button type="submit" class="icon-btn" style="color: white;" data-tooltip="{{ t('watchout.close') }}" data-i18n-title="watchout.close">✖️</button>
+        </form>
+        {% endif %}
+    </div>
+    {% else %}
+    <p class="muted wo-empty" data-i18n="watchout.quiet">{{ t('watchout.quiet') }}</p>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h1>🚀 <span data-i18n="changelog.title">{{ t('changelog.title') }}</span></h1>
+    <p class="page-sub" data-i18n="changelog.sub">{{ t('changelog.sub') }}</p>
+</div>
+
+<div class="box" style="max-width: 720px; margin: 0 auto; text-align: left; padding: 28px;">
+
+    <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: var(--accent);">v2.7.3 - Hosting trim</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.latest">{{ t('changelog.latest') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Removed the notification bell, the inbox page, and the Live Activity ticker. PythonAnywhere stays usable without those live widgets.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.7.2 - Full UI language</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li data-i18n="changelog.v272">{{ t('changelog.v272') }}</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.7.1 - Languages</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Profile menu: <strong>Language</strong> picker next to Themes (English default, plus German, Polish, Czech, Croatian, French, Japanese).</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.7.0 - Launch Polish</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Sidebar: 🏠 <strong>Homepage</strong> category, hover-to-expand (collapsed by default), Home labeled <strong>OreTime</strong>.</li>
+            <li>Home hero can play a muted looping video behind <strong>Saturday Command</strong> (canvas fallback if no file).</li>
+            <li>🎒 <strong>Your Loot</strong> under Shop — owned borders, banners, titles, and MVP boosts, sorted by rarity (Legendary / Secret first).</li>
+            <li>Profile saves over AJAX (no 10s reload).</li>
+            <li>Full <strong>English copy</strong> pass across inventory and remaining mixed UI.</li>
+            <li>Shop drop: Cyan, Ember, Frost, Void, Plasma, Aurora, Glitch, Obsidian borders plus Carbon, Ember Wake, Frostline, Acid Vein, Ion Drift, Velvet Static, Aurora Veil, Molten banners.</li>
+            <li>Two extra shop banners so the banner grid is 12: <strong>Acid Vein</strong> (Rare, 90 OC) and <strong>Velvet Static</strong> (Epic, 135 OC).</li>
+            <li>Shop card names use that item’s colors. Equipped banners and shop preview wordmarks read <strong>OreTime</strong> (not All Time).</li>
+            <li>Animated banners (Velvet Static, Aurora Veil, Molten, Giga, VOIDGLITCH, Genesis, Founder, and others) loop seamlessly — no hard reset at the loop point.</li>
+            <li>Battle Pass track is filled 1–20 with exclusives (Dawn Veil, Eclipse, Genesis, Apex Ring, Protocol Pioneer) and a season countdown to 23 Sep 2026 on Home and the Pass.</li>
+            <li>Events vote/podium card scaled down slightly.</li>
+            <li>All Members: larger cards, equipped banner as background, profile frame, contrast-aware name text.</li>
+            <li>Wishlist is one request window with a type dropdown (Game / Banner / Profile frame / Other wishes). Admin → Wishlist Requests tabs match. The standalone Requests sidebar is gone — those wishes fold into Wishlist.</li>
+            <li>Shop prices: MVP Multiplier <strong>200 OC</strong>, Custom Title <strong>100 OC</strong>.</li>
+            <li>MVP Multiplier lands in Your Loot. On Events voting, <strong>Use</strong> consumes one for that week; skip keeps it.</li>
+            <li>Launch economy reset: vaults start clean (0 OC, empty inventory, default cosmetics). The infinite-OC founder grant is gone.</li>
+            <li>☀️ Daily Ore: once per server day. The 7-day streak wraps after the week bonus; a missed day resets it.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.6.2 - OreTime wordmark, Wishlist tabs, Daily week</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Banner art (shop preview and equipped) reads <strong>OreTime</strong>. Catalog names stay on the shop card.</li>
+            <li>Wishlist type dropdown is Game / Banner / Profile frame / Other wishes. Admin tabs list the matching requests; leftover “general” wishes sit under Other wishes.</li>
+            <li>Daily Ore stays once per server day. The 7-day streak week wraps after day 7 (bonus) so the next claim starts a new week.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.6.1 - Banner wordmarks & Wishlist</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Shop banner cards show the catalog name in that banner’s colors. Equipped banners (player card, All Members, profile) all read <strong>OreTime</strong>.</li>
+            <li>Wishlist is one request window with a type dropdown (Game / Banner / Profile frame / Other / General wish). Requests live in Admin → Wishlist Requests tabs.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.6.0 - Polish Pass</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Sidebar now has a 🏠 <strong>Homepage</strong> category, hero video, and 🎒 <strong>Your Loot</strong>.</li>
+            <li>Profile saves without a full reload.</li>
+            <li>Full <strong>English copy</strong> pass across inventory and remaining mixed UI.</li>
+            <li>Shop drop: Cyan, Ember, Frost, Void, Plasma, Aurora, Glitch, Obsidian borders plus Carbon, Ember Wake, Frostline, Ion Drift, Aurora Veil, Molten banners.</li>
+            <li>Battle Pass is filled 1–20 with exclusives (Dawn Veil, Eclipse, Genesis, Apex Ring, Protocol Pioneer) and a season countdown to 23 Sep 2026.</li>
+            <li>Events vote/podium card scaled down slightly so it feels less huge.</li>
+            <li>ORETIMERS → All Members: larger cards, name + profile frame, equipped banner as the card background, contrast-aware text.</li>
+            <li>New 🎨 <strong>Requests</strong> tab under Wishlist: submit border/banner/other ideas; public board for the crew.</li>
+            <li>Shop prices: MVP Multiplier <strong>200 OC</strong>, Custom Title <strong>100 OC</strong>.</li>
+            <li>MVP Multiplier now sits in Your Loot until you choose <strong>Use for this week?</strong> on Events voting — skip keeps it, Use consumes one.</li>
+            <li>Your Loot is grouped by rarity (Legendary / Secret at the top, then Epic → Rare → Uncommon → Common).</li>
+            <li>Founder economy reset: 0 OC, empty inventory, default cosmetics. Founder infinite-OC grant is gone. Account and admin stay.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.5.1 - Season countdown</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Home and Battle Pass now show a live <strong>season countdown</strong> to 23 Sep 2026 (days, hours, minutes, seconds). After that it reads Season ended.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.5.0 - Cosmetic Drop</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Shop: 8 new avatar borders (Cyan → Obsidian) and 6 new banners (Carbon → Molten), CSS-only, same buy/equip flow.</li>
+            <li>Battle Pass track is filled 1–20: OC, Season XP, <strong>Protocol Pioneer</strong> title, plus Pass Exclusive cosmetics (Dawn Veil, Eclipse, Genesis, Apex Ring) that are not sold in the Shop.</li>
+            <li>Inventory rarity colors and profile border/banner dropdowns pick up the new catalog automatically.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.4.3 - English copy</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>All user-facing copy is now <strong>English</strong>.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.4.2 - Signals &amp; Loot</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Home hero can play a muted looping <strong>MP4</strong> behind Saturday Command (R.E.P.O. maps to <code>static/video/hero-repo.mp4</code>) with a dark overlay and canvas fallback.</li>
+            <li>Added 🎒 <strong>Your Loot</strong> under Shop: CS2-style inventory of owned borders, banners, titles, and MVP boosts.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.4.1 - Battle Pass</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Added 📡 <strong>Battle Pass</strong> under Gaming Hub: full Saturday Protocol track (levels 1–20), XP bar, and cosmetic previews.</li>
+            <li>Season rewards at 5 / 10 / 15 / 20 are now <strong>claimable</strong> on the Pass — they no longer auto-grant on XP. Already unlocked cosmetics stay claimed.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.4.0 - Command Center</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Replaced the top nav sausage with a collapsible <strong>Discord-style left sidebar</strong> (Gaming Hub, Community, Shop, System). Slim top bar keeps avatar, OC balance, and Daily.</li>
+            <li>Home is now a <strong>Command Center</strong> widget grid: session + winner, countdown, radar, WatchOuts, Daily/Season, and a Top 3 richest vault.</li>
+            <li>Added 🎬 <strong>Highlights</strong>: paste Twitch / YouTube / Medal.tv clips, 🔥 likes, weekly Clip of the Week (+100 OC once when the week closes).</li>
+            <li>Added 🎯 <strong>Quests</strong>: three weekly bounties (vote, WatchOut, Armory save). Clear all three for a 40–80 OC Bounty Crate.</li>
+            <li>Armory 2.0: one setup photo, gallery, 1–5 star Showdown. Nice Setup stamps still pay +1 OC.</li>
+            <li>Added 📚 <strong>Game Library</strong> with Steam covers and who owns / who is missing (playtime from the Events Steam cache).</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.3.0 - Saturday Protocol</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Replaced 🎰 Ore Wheel with 🪙 <strong>The Flip Pit</strong>: PvP coinflip lobbies (create/join), 5% rake burned as Pit ashes, 10-minute expire + refund.</li>
+            <li>Added 📦 <strong>Ore Crate</strong> (75 OC) with weighted drops, duplicate consolation, and a 1% <strong>VOIDGLITCH</strong> banner you cannot buy.</li>
+            <li>Added ☀️ <strong>Daily Ore</strong> on Home (and Shop): +2 OC a day, +20 on a 7-day streak. Skip a day and the streak resets.</li>
+            <li>Added 🖥️ <strong>Nice Setup</strong> on Armory rigs: one like per player, +1 OC to the owner.</li>
+            <li>Added 📡 <strong>Season 1: Saturday Protocol</strong> — XP from votes, claims, WatchOut, and flips (80 XP/day cap). Exclusive cosmetics at 5 / 10 / 15 / 20.</li>
+            <li>Added 🎮 <strong>Recent Steam games</strong> on player cards (last 2 weeks, cached) and a ⚔️ <strong>Rivals / Stat-Check</strong> tab for trash-talk comparisons.</li>
+            <li>Added 🔀 <strong>Back Alley</strong> trading in Shop: list cosmetics, buyer pays OC, item transfers server-side.</li>
+            <li>Added 📊 <strong>Admin Analytics</strong>: real votes-by-weekday, OC in circulation, WatchOut hours.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.2.0 - The Shop &amp; Casino Update</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em;">
+            <li>Added 🎰 <strong>Shop Casino</strong>: Spin the Ore Wheel with stakes of 5 / 10 / 20 / 50 / 100 / 250 / 500 OC. Rolls are server-side with ~90% RTP.</li>
+            <li>Added 🖼️ <strong>Avatar Borders</strong>: Buy and equip borders as shop cards — same layout as banners, no extra popup.</li>
+            <li>Added 👑 <strong>Founder Label</strong>: Neon Founder badge on the founder's player card (under the stats). Forced Founder banner is gone; shop banners can be equipped.</li>
+            <li>Updated 💰 <strong>Banner Prices</strong>: Standard is FREE, Pro 50, Ultra 150, Giga 200 OC.</li>
+            <li>Added 🎮 <strong>Steam Cover Fallbacks</strong>: Game images retry across multiple CDNs when a cover fails to load.</li>
+            <li>Fixed 🌈 <strong>Banner Animations</strong>: Rainbow/GIGA loops no longer jump or rattle; Ultra gradient is smoother. Overlay "OreTime" text is centered between banner top and avatar, and isn't selectable.</li>
+            <li>Fixed 👤 <strong>Player Cards</strong>: Clicking avatars and usernames opens cards again. Missing avatars use the Discord default.</li>
+            <li>Fixed 🗳️ <strong>Voting</strong>: Empty votes no longer grant OreCoins, the MVP multiplier actually applies, and vote dates are validated.</li>
+            <li>Fixed 📊 <strong>Events Tab</strong>: Ranking chart renders correctly (it was broken while the tab was hidden). Countdown now matches the displayed Saturday.</li>
+            <li>Fixed 🛡️ <strong>Armory</strong>: The form now prefills your existing gear.</li>
+            <li>Fixed 🚨 <strong>WatchOut</strong>: Duplicate posts from the same user update instead of stacking.</li>
+            <li>Fixed 🔧 <strong>Discord Sync</strong>: No longer errors out on bad JSON.</li>
+            <li>Fixed 🧭 <strong>Navbar</strong>: Brand text is now ORETIMERS (was ORTIMERS).</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.1.0 - The Quality of Life Update</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em; opacity: 0.8;">
+            <li>Added 🎨 <strong>Unified Profile UI</strong>: The "Edit Profile" menu now perfectly mirrors the Discord-style Player Card with a live banner preview.</li>
+            <li>Added 📊 <strong>Live Stats Fetching</strong>: Opening your settings now dynamically loads your Total Votes, Top Game, and Steam Badge in real-time via Javascript.</li>
+            <li>Updated ⌨️ <strong>The Armory</strong>: Swapped 'In-Game Sens' for 'Keyboard' tracking to better reflect hardware setups.</li>
+            <li>Updated 🌑 <strong>Theme Selection</strong>: Removed 'Light Mode' and 'Matrix' to protect your eyes and keep the aesthetic consistently clean.</li>
+            <li>Implemented 🔒 <strong>Scroll-Lock Mechanics</strong>: The background website is now frozen in place whenever a popup or player card is opened to prevent scrolling glitches.</li>
+            <li>Fixed 🐛 <strong>Footer Positioning</strong>: The site credit footer is now permanently cemented to the bottom right corner, regardless of page length.</li>
+        </ul>
+    </div>
+
+    <div class="timeline-item past" style="margin-bottom: 0;">
+        <div class="timeline-dot"></div>
+        <h2 style="margin: 0; color: rgba(255,255,255,0.7);">v2.0.0 - The Hub &amp; Community Update</h2>
+        <span class="muted" style="font-size: 0.9em;" data-i18n="changelog.previous">{{ t('changelog.previous') }}</span>
+        <ul style="margin-top: 15px; line-height: 1.8; font-size: 1.05em; opacity: 0.8;">
+            <li>Added 📡 <strong>Deployment Radar</strong> on the home page and events tab to track weekend availability (IN / MAYBE / OUT).</li>
+            <li>Added 👤 <strong>Interactive Player Cards</strong>: Click any username anywhere to launch a Discord-style profile popup with custom banners, avatars, stats, and live Steam info.</li>
+            <li>Added 🖥️ <strong>The Armory &amp; Gear Update</strong>: Track PC hardware including CPU, GPU, Mouse, and Keyboard configurations.</li>
+            <li>Added 🎨 <strong>Custom Profile Banners</strong>: Personalize profile cards with live color pickers and live previews.</li>
+            <li>Added 🚨 <strong>WatchOut</strong>: Real-time LFG (Looking for Group) system with automated Discord Webhook pings.</li>
+            <li>Added 🏆 <strong>Hall of Fame</strong> &amp; <strong>Podium UI</strong>: Global all-time game statistics and MVP voter tracking.</li>
+            <li>Added 🎲 <strong>Roulette</strong> to randomly select games when undecided.</li>
+            <li>Added 💡 <strong>Wishlist</strong> for users to suggest new games to admins.</li>
+            <li>Added 💻 <strong>Live Code Tracker</strong>: Automatic Lines of Code (LOC) counter cemented in the bottom right footer.</li>
+            <li>Added 🛠️ <strong>System Status</strong> page with live database metrics and terminal.</li>
+            <li>Implemented 🥷 <strong>Stealth Actions</strong>: Smooth background deletions and tab navigations without annoying popups.</li>
+            <li>Introduced dynamic Javascript dropdown lockout to prevent duplicate game votes and added celebratory confetti effects.</li>
+            <li>Some game images aren't loading because <strong>Steam is dumb</strong>.</li>
+        </ul>
+    </div>
+
+</div>
+{% endblock %}

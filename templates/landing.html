@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="landing-wrap">
+    <p class="landing-kicker" data-i18n="landing.kicker">{{ t('landing.kicker') }}</p>
+    <h1 class="landing-title">ORETIMERS</h1>
+    <p class="page-sub landing-lead" data-i18n="landing.lead">{{ t('landing.lead') }}</p>
+
+    <div class="box landing-card">
+        <h2 style="margin-top: 0; margin-bottom: 12px;">🎮 <span data-i18n="landing.ready">{{ t('landing.ready') }}</span></h2>
+        <p class="muted" style="margin-bottom: 26px; font-size: 1.05em;" data-i18n="landing.loginHint">
+            {{ t('landing.loginHint') }}
+        </p>
+
+        <a href="/login" class="discord-cta">
+            <button type="button" class="btn-discord">
+                <span style="font-size: 1.3em;">👾</span> <span data-i18n="landing.login">{{ t('landing.login') }}</span>
+            </button>
+        </a>
+        <div class="lang-field" style="margin-top: 18px; text-align: left;">
+            <label for="ot-lang-select" data-i18n="nav.language">{{ t('nav.language') }}</label>
+            <select id="ot-lang-select">
+                <option value="en"{% if ui_lang == 'en' %} selected{% endif %}>English</option>
+                <option value="de"{% if ui_lang == 'de' %} selected{% endif %}>Deutsch</option>
+                <option value="pl"{% if ui_lang == 'pl' %} selected{% endif %}>Polski</option>
+                <option value="cs"{% if ui_lang == 'cs' %} selected{% endif %}>Čeština</option>
+                <option value="hr"{% if ui_lang == 'hr' %} selected{% endif %}>Hrvatski</option>
+                <option value="fr"{% if ui_lang == 'fr' %} selected{% endif %}>Français</option>
+                <option value="ja"{% if ui_lang == 'ja' %} selected{% endif %}>日本語</option>
+            </select>
+        </div>
+    </div>
+</div>
+{% endblock %}

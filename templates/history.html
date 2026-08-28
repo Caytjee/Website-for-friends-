@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .vault { text-align: left; }
+    .vault-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: var(--accent); opacity: 0.85; margin: 0 0 6px;
+    }
+    .vault-hero {
+        position: relative; overflow: hidden; border-radius: 18px; padding: 28px 24px 24px;
+        margin-bottom: 22px; text-align: left;
+        background:
+            radial-gradient(ellipse at 20% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 90%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 16px 40px rgba(0,0,0,0.35);
+    }
+    .vault-hero h1 { margin: 0 0 8px; }
+    .film-strip {
+        display: flex; gap: 10px; overflow-x: auto; padding: 8px 4px 14px; margin: 8px 0 0;
+        scroll-snap-type: x proximity;
+    }
+    .film-cell {
+        flex: 0 0 auto; scroll-snap-align: start; width: 168px;
+        background: #0b0b0b; border: 2px solid #1a1a1a; border-radius: 6px; padding: 8px 6px;
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.04);
+        position: relative;
+    }
+    .film-cell::before, .film-cell::after {
+        content: ''; position: absolute; left: 0; right: 0; height: 8px;
+        background: repeating-linear-gradient(90deg, #111 0 8px, #333 8px 14px);
+    }
+    .film-cell::before { top: 0; }
+    .film-cell::after { bottom: 0; }
+    .film-cell img { width: 100%; border-radius: 3px; display: block; margin: 10px 0; }
+    .film-cell .film-fallback {
+        height: 69px; margin: 10px 0; display: flex; align-items: center; justify-content: center;
+        font-size: 1.6em; opacity: 0.5; background: #161616; border-radius: 3px;
+    }
+    .film-date { font-size: 0.68em; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; font-weight: 800; }
+    .film-name { font-size: 0.82em; font-weight: 800; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .vault-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr); gap: 16px; margin-bottom: 28px; }
+    .trophy-wall { margin: 0; border-top: 4px solid #ffd700; }
+    .trophy-row {
+        padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+        display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+    .mvp-frame {
+        margin: 0; text-align: center;
+        background:
+            radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 50%),
+            var(--bg-box);
+        border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+        box-shadow: inset 0 0 40px color-mix(in srgb, var(--accent) 8%, transparent);
+    }
+    .mvp-frame img {
+        width: 96px; height: 96px; border-radius: 50%; object-fit: cover; cursor: pointer;
+        border: 3px solid var(--accent); box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+    .vault-timeline { max-width: 720px; margin: 0 auto; }
+    .vault-entry {
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        background: color-mix(in srgb, var(--bg-box) 92%, #000);
+    }
+    .vault-entry img { width: 132px; max-width: 38%; border-radius: 6px; border: 1px solid var(--accent); display: block; }
+    @media (max-width: 800px) {
+        .vault-grid { grid-template-columns: 1fr; }
+        .vault-entry { flex-wrap: wrap; }
+        .vault-entry img { width: 100%; max-width: none; }
+    }
+</style>
+
+<div class="vault">
+    <div class="vault-hero">
+        <p class="vault-kicker" data-i18n="history.kicker">{{ t('history.kicker') }}</p>
+        <div class="page-header" style="margin: 0;">
+            <h1>📜 <span data-i18n="history.title">{{ t('history.title') }}</span></h1>
+            <p class="page-sub" data-i18n="history.sub">{{ t('history.sub') }}</p>
+        </div>
+        {% if history_data %}
+        <div class="film-strip" aria-label="{{ t('history.filmAria') }}" data-i18n-aria="history.filmAria">
+            {% for entry in history_data %}
+            {% set appid = game_appids.get(entry.winner, 'non') %}
+            <div class="film-cell">
+                <div class="film-date">{{ entry.date }}</div>
+                {% if appid != 'non' and entry.winner != 'TBD (No votes yet)' %}
+                <img src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ appid }}/capsule_184x69.jpg" alt="{{ entry.winner }}" data-appid="{{ appid }}" data-name="{{ entry.winner }}" data-steam-asset="capsule_184x69.jpg" onerror="steamImgFallback(this)">
+                {% else %}
+                <div class="film-fallback">🎮</div>
+                {% endif %}
+                <div class="film-name">{{ entry.winner }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="vault-grid">
+        <div class="box trophy-wall">
+            <p class="vault-kicker" style="color: #ffd700;" data-i18n="history.hallLedger">{{ t('history.hallLedger') }}</p>
+            <h2 style="margin-top: 0; color: #ffd700;">🏆 <span data-i18n="history.top3">{{ t('history.top3') }}</span></h2>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                {% for game, score in top_games %}
+                <li class="trophy-row">
+                    <span style="font-size: 1.08em; font-weight: 800;">
+                        {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% else %}🥉{% endif %} {{ game }}
+                    </span>
+                    <span class="stat-pill">{{ score }} <span data-i18n="history.pts">{{ t('history.pts') }}</span></span>
+                </li>
+                {% else %}
+                <li class="muted" data-i18n="history.noVotes">{{ t('history.noVotes') }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="box mvp-frame">
+            <p class="vault-kicker" data-i18n="history.portrait">{{ t('history.portrait') }}</p>
+            <h2 style="margin-top: 0;">⭐ <span data-i18n="history.mvp">{{ t('history.mvp') }}</span></h2>
+            {% if mvp %}
+            <span class="player-card {{ border_wrap_class(mvp.active_border) }}" data-player-username="{{ mvp.username }}" data-player-steam="{{ mvp.steam_id or '' }}" data-active-border="{{ mvp.active_border or '' }}" data-default-border="2px solid var(--accent)">
+                <img src="{{ mvp.avatar or default_avatar }}" alt="MVP Avatar" class="{{ border_img_class(mvp.active_border) }}" onclick='openPlayerCard({{ mvp.username | tojson }})'{% if border_wrap_class(mvp.active_border) %} style="border:none;"{% endif %}>
+            </span>
+            <div style="margin-top: 12px;">
+                <span onclick='openPlayerCard({{ mvp.username | tojson }})' style="cursor: pointer; text-decoration: underline; text-decoration-color: var(--accent); color: var(--accent); font-weight: 800;">{{ mvp.username }}</span>
+            </div>
+            <p class="muted" style="margin: 6px 0 0 0;" data-i18n="history.mostActive" data-i18n-vars='{{ {"n": mvp.vote_count} | tojson }}'>{{ t('history.mostActive', n=mvp.vote_count) }}</p>
+            {% else %}
+            <p class="muted" data-i18n="history.noVoters">{{ t('history.noVoters') }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="box">
+        <div class="page-header" style="margin: 0 0 16px;">
+            <h1 data-i18n="history.archives">{{ t('history.archives') }}</h1>
+            <p class="page-sub" data-i18n="history.lookBack">{{ t('history.lookBack') }}</p>
+        </div>
+
+        <div class="vault-timeline">
+            {% for entry in history_data %}
+            {% set appid = game_appids.get(entry.winner, 'non') %}
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="box history-row vault-entry" style="margin-top: 0;">
+                    <div>
+                        <span style="font-weight: 800; font-size: 1.1em; display: block; margin-bottom: 5px;">{{ entry.date }}</span>
+                        <span style="color: var(--accent); font-size: 1.35em; font-weight: 900;">{{ entry.winner }}</span>
+                    </div>
+                    {% if appid != 'non' and entry.winner != 'TBD (No votes yet)' %}
+                    <img src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ appid }}/capsule_184x69.jpg" alt="{{ entry.winner }}" data-appid="{{ appid }}" data-name="{{ entry.winner }}" data-steam-asset="capsule_184x69.jpg" onerror="steamImgFallback(this)">
+                    {% else %}
+                    <div style="font-size: 2em; opacity: 0.5;">🎮</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <p class="muted" data-i18n="history.noRecords">{{ t('history.noRecords') }}</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

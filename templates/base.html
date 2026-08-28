@@ -1,0 +1,2590 @@
+<!DOCTYPE html>
+<html lang="{{ ui_lang|default('en') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORETIME Gaming</title>
+    <script>
+    (function () {
+        var langs = ['en', 'de', 'pl', 'cs', 'hr', 'fr', 'ja'];
+        var lang = document.documentElement.lang || 'en';
+        try {
+            var stored = localStorage.getItem('ot_lang');
+            var cookie = document.cookie.match(/(?:^|; )ot_lang=([^;]*)/);
+            if (cookie) {
+                var c = decodeURIComponent(cookie[1]);
+                if (langs.indexOf(c) >= 0) lang = c;
+            } else if (langs.indexOf(stored) >= 0) {
+                lang = stored;
+            }
+        } catch (e) {}
+        document.documentElement.lang = lang;
+        document.documentElement.setAttribute('data-lang', lang);
+    })();
+    </script>
+    <script>
+    window.OT_LANG = {{ (ui_lang or 'en')|tojson }};
+    window.OT_I18N = {{ (ui_i18n or {})|tojson }};
+</script>
+    <script src="{{ url_for('static', filename='i18n/i18n.js') }}"></script>
+
+    {% if request.endpoint in ('events', 'admin') %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    {% endif %}
+    <script>
+    function steamImgFallback(img) {
+        if (!img) return;
+        const appid = (img.getAttribute('data-appid') || '').trim();
+        const name = img.getAttribute('data-name') || img.alt || 'Game';
+        const asset = img.getAttribute('data-steam-asset') || 'header.jpg';
+        let step = parseInt(img.getAttribute('data-steam-step') || '0', 10);
+
+        if (!appid || appid === 'non') {
+            img.onerror = null;
+            return;
+        }
+
+        const cdns = [
+            (id, file) => 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/' + id + '/' + file,
+            (id, file) => 'https://cdn.cloudflare.steamstatic.com/steam/apps/' + id + '/' + file,
+            (id, file) => 'https://steamcdn-a.akamaihd.net/steam/apps/' + id + '/' + file
+        ];
+        const files = asset === 'header.jpg' ? ['header.jpg'] : [asset, 'header.jpg'];
+        const urls = [];
+        files.forEach(function (file) {
+            cdns.forEach(function (build) { urls.push(build(appid, file)); });
+        });
+        urls.push('https://placehold.co/250x115/1e1e1e/ffffff/png?text=' + encodeURIComponent(name));
+
+        step += 1;
+        if (step >= urls.length) {
+            img.onerror = null;
+            return;
+        }
+        if (step === urls.length - 1) img.onerror = null;
+        img.setAttribute('data-steam-step', String(step));
+        img.src = urls[step];
+    }
+    </script>
+
+    {% set theme = current_theme or session.get('theme', 'pink') %}
+    {% set cosmetic_labels = cosmetic_labels or {} %}
+    {% set nav_borders = nav_borders or [] %}
+    {% set nav_owned_banners = nav_owned_banners or [] %}
+    {% set nav_banner_config = nav_banner_config or {} %}
+
+    {% if theme == 'dark' %}
+        {% set var_bg_main = '#121212' %}{% set var_bg_box = '#1e1e1e' %}{% set var_text = '#e0e0e0' %}{% set var_accent = '#bb86fc' %}{% set var_btn = '#3700b3' %}{% set var_btn_hover = '#6200ee' %}{% set var_input_bg = '#2d2d2d' %}
+    {% elif theme == 'hacker' %}
+        {% set var_bg_main = '#0d1117' %}{% set var_bg_box = '#161b22' %}{% set var_text = '#c9d1d9' %}{% set var_accent = '#3fb950' %}{% set var_btn = '#238636' %}{% set var_btn_hover = '#2ea043' %}{% set var_input_bg = '#0d1117' %}
+    {% elif theme == 'ocean' %}
+        {% set var_bg_main = '#0f172a' %}{% set var_bg_box = '#1e293b' %}{% set var_text = '#f1f5f9' %}{% set var_accent = '#38bdf8' %}{% set var_btn = '#0284c7' %}{% set var_btn_hover = '#0ea5e9' %}{% set var_input_bg = '#0f172a' %}
+    {% elif theme == 'cyberpunk' %}
+        {% set var_bg_main = '#0b0914' %}{% set var_bg_box = '#18122b' %}{% set var_text = '#fffb00' %}{% set var_accent = '#ff007f' %}{% set var_btn = '#ff007f' %}{% set var_btn_hover = '#b50059' %}{% set var_input_bg = '#241b3d' %}
+    {% elif theme == 'sunset' %}
+        {% set var_bg_main = '#1a0b2e' %}{% set var_bg_box = '#2d1249' %}{% set var_text = '#ffedd5' %}{% set var_accent = '#fb923c' %}{% set var_btn = '#ea580c' %}{% set var_btn_hover = '#c2410c' %}{% set var_input_bg = '#3b185e' %}
+    {% else %}
+        {% set var_bg_main = '#19141e' %}{% set var_bg_box = '#241b2c' %}{% set var_text = '#f8f8f2' %}{% set var_accent = '#ff79c6' %}{% set var_btn = '#bd93f9' %}{% set var_btn_hover = '#ff79c6' %}{% set var_input_bg = '#32253d' %}
+    {% endif %}
+
+    <style>
+        :root {
+            --bg-main: {{ var_bg_main }};
+            --bg-box: {{ var_bg_box }};
+            --text-main: {{ var_text }};
+            --accent: {{ var_accent }};
+            --btn: {{ var_btn }};
+            --btn-hover: {{ var_btn_hover }};
+            --input-bg: {{ var_input_bg }};
+            --radius: 14px;
+            --radius-sm: 8px;
+            --shadow: 0 8px 28px rgba(0,0,0,0.32);
+            --border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+            --muted: color-mix(in srgb, var(--text-main) 68%, transparent);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        body { background-color: var(--bg-main); color: var(--text-main); font-family: 'Segoe UI', sans-serif; text-align: center; padding-bottom: 72px; transition: 0.3s; margin: 0; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: none; } }
+
+        [data-tooltip] { position: relative; cursor: pointer; }
+        [data-tooltip]::after { content: attr(data-tooltip); position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--bg-box); color: white; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--accent); font-size: 0.85em; font-weight: bold; white-space: nowrap; opacity: 0; pointer-events: none; transition: all 0.2s ease; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000; }
+        [data-tooltip]:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 20px; padding-top: 96px; animation: fadeIn 0.4s ease-out forwards; }
+        body:not(.has-app-shell) .container { padding-top: 36px; }
+
+        body.has-app-shell {
+            --sidebar-width: 252px;
+            --sidebar-collapsed: 72px;
+            --topbar-h: 56px;
+            --shell-line: color-mix(in srgb, var(--accent) 32%, transparent);
+        }
+        body.has-app-shell .container {
+            max-width: 1180px;
+            padding: 20px;
+            padding-top: calc(var(--topbar-h) + 22px);
+            padding-left: calc(var(--sidebar-collapsed) + 24px);
+            padding-right: 24px;
+            border-left: none;
+            transition: padding-left 0.2s ease;
+        }
+        @media (min-width: 981px) {
+            body.sidebar-pinned.has-app-shell .container {
+                padding-left: calc(var(--sidebar-width) + 24px);
+            }
+            body.sidebar-pinned .app-topbar {
+                padding-left: calc(var(--sidebar-width) + 16px);
+            }
+            body.sidebar-pinned.has-app-shell .footer-dock {
+                padding-left: calc(var(--sidebar-width) + 14px);
+            }
+        }
+
+        .app-sidebar {
+            position: fixed; top: 0; left: 0; height: 100vh; width: var(--sidebar-collapsed);
+            background: color-mix(in srgb, var(--bg-box) 92%, #000);
+            border: none;
+            border-right: 1px solid var(--shell-line);
+            z-index: 1200; display: flex; flex-direction: column; text-align: left;
+            box-shadow: none; overflow: visible;
+            transition: width 0.2s ease, transform 0.22s ease;
+        }
+        .sidebar-hover-bridge {
+            position: absolute; top: 0; left: 100%; width: 20px; height: 100%;
+        }
+        .sidebar-brand {
+            display: flex; align-items: center; gap: 10px;
+            width: 100%; height: var(--topbar-h); flex-shrink: 0;
+            padding: 0 16px; box-sizing: border-box; overflow: hidden;
+            text-decoration: none; color: var(--accent); font-weight: 900;
+            letter-spacing: 0.14em; text-transform: uppercase; font-size: 1.02em;
+            text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 35%, transparent);
+            border: none;
+            border-bottom: 1px solid var(--shell-line);
+        }
+        .sidebar-logo { font-size: 1.35em; letter-spacing: 0; filter: drop-shadow(0 0 8px var(--accent)); flex-shrink: 0; }
+        .sidebar-nav {
+            flex: 1; overflow-x: hidden; overflow-y: auto; padding: 10px 8px 16px;
+            display: flex; flex-direction: column; gap: 0;
+        }
+        .nav-section {
+            display: flex; flex-direction: column; gap: 0;
+            margin: 0;
+        }
+        .nav-section-label,
+        .side-section {
+            font-size: 1em; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--accent); padding: 14px 12px 6px; white-space: nowrap;
+            overflow: hidden; line-height: 1.25; max-height: 3.2em;
+            box-sizing: border-box;
+        }
+        .side-link {
+            display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px;
+            color: var(--text-main); text-decoration: none; font-weight: 700; font-size: 0.92em;
+            opacity: 0.78; transition: 0.15s;
+        }
+        .side-link:hover { opacity: 1; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+        .side-link.active { opacity: 1; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+        .side-link.side-shop { color: #FFD700; opacity: 0.9; }
+        .side-link.side-shop:hover, .side-link.side-shop.active { color: #FFD700; background: rgba(255,215,0,0.1); box-shadow: inset 3px 0 0 #FFD700; }
+        .side-ico { width: 1.4em; text-align: center; flex-shrink: 0; }
+        .side-txt { white-space: nowrap; }
+        .sidebar-pin {
+            display: none;
+            flex-shrink: 0;
+            align-items: center;
+            gap: 10px;
+            width: calc(100% - 16px);
+            margin: 8px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+            background: transparent;
+            color: var(--text-main);
+            font-weight: 800;
+            font-size: 0.88em;
+            cursor: pointer;
+            opacity: 0.78;
+        }
+        .sidebar-pin:hover { opacity: 1; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+        body.sidebar-pinned .sidebar-pin {
+            opacity: 1;
+            color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 16%, transparent);
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+        .sidebar-backdrop { display: none; }
+
+        @media (min-width: 981px) {
+            .sidebar-pin { display: flex; }
+            .app-sidebar:hover,
+            body.sidebar-expanded .app-sidebar,
+            body.sidebar-pinned .app-sidebar,
+            .app-sidebar:focus-within {
+                width: var(--sidebar-width);
+                transition-delay: 0s;
+            }
+            .sidebar-nav {
+                padding: 6px 8px 10px;
+                gap: 0;
+                transition: padding 0.2s ease, gap 0.2s ease;
+            }
+            .nav-section {
+                gap: 0;
+                margin: 0;
+                transition: gap 0.2s ease, margin 0.2s ease;
+            }
+            .nav-section-label,
+            .side-section {
+                max-height: 0;
+                opacity: 0;
+                margin: 0;
+                padding-top: 0;
+                padding-bottom: 0;
+                line-height: 0;
+                pointer-events: none;
+                transition: max-height 0.2s ease, opacity 0.18s ease, padding 0.2s ease, line-height 0.2s ease, margin 0.2s ease;
+            }
+            .side-link {
+                padding: 4px 12px;
+                transition: padding 0.2s ease, background 0.15s ease, opacity 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+            }
+            .sidebar-brand-text,
+            .side-txt {
+                opacity: 0;
+                transition: opacity 0.12s ease 0.18s;
+            }
+            .app-sidebar:hover .sidebar-nav,
+            body.sidebar-expanded .sidebar-nav,
+            body.sidebar-pinned .sidebar-nav,
+            .app-sidebar:focus-within .sidebar-nav {
+                padding: 10px 8px 16px;
+                gap: 0;
+            }
+            .app-sidebar:hover .nav-section,
+            body.sidebar-expanded .nav-section,
+            body.sidebar-pinned .nav-section,
+            .app-sidebar:focus-within .nav-section {
+                gap: 0;
+                margin: 0;
+            }
+            .app-sidebar:hover .nav-section-label,
+            .app-sidebar:hover .side-section,
+            body.sidebar-expanded .nav-section-label,
+            body.sidebar-expanded .side-section,
+            body.sidebar-pinned .nav-section-label,
+            body.sidebar-pinned .side-section,
+            .app-sidebar:focus-within .nav-section-label,
+            .app-sidebar:focus-within .side-section {
+                max-height: 3.2em;
+                opacity: 1;
+                padding: 14px 12px 6px;
+                line-height: 1.25;
+                pointer-events: auto;
+            }
+            .app-sidebar:hover .side-link,
+            body.sidebar-expanded .side-link,
+            body.sidebar-pinned .side-link,
+            .app-sidebar:focus-within .side-link {
+                padding: 8px 12px;
+            }
+            .app-sidebar:hover .sidebar-brand-text,
+            .app-sidebar:hover .side-txt,
+            body.sidebar-expanded .sidebar-brand-text,
+            body.sidebar-expanded .side-txt,
+            body.sidebar-pinned .sidebar-brand-text,
+            body.sidebar-pinned .side-txt,
+            .app-sidebar:focus-within .sidebar-brand-text,
+            .app-sidebar:focus-within .side-txt {
+                opacity: 1;
+                transition-delay: 0s;
+            }
+        }
+
+        .app-topbar {
+            position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h);
+            background: color-mix(in srgb, var(--bg-box) 94%, transparent); backdrop-filter: blur(14px);
+            border: none;
+            border-bottom: 1px solid var(--shell-line);
+            display: flex; align-items: center; gap: 12px;
+            padding: 0 16px 0 calc(var(--sidebar-collapsed) + 16px);
+            z-index: 1100;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            transition: padding-left 0.2s ease;
+        }
+        .topbar-spacer { flex: 1; }
+        .nav-daily {
+            margin: 0; padding: 7px 12px; font-size: 0.82em; background: linear-gradient(90deg,#00e5ff,#7c4dff);
+            white-space: nowrap;
+        }
+        .nav-daily:disabled { opacity: 0.55; }
+        .nav-oc {
+            display: inline-flex; align-items: center; gap: 6px; color: #FFD700; text-decoration: none;
+            font-weight: 900; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.38);
+            background: rgba(255,215,0,0.08); white-space: nowrap;
+        }
+        .nav-oc:hover { background: rgba(255,215,0,0.16); }
+        .topbar-profile { position: relative; display: flex; align-items: center; }
+        .hamburger { display: none; font-size: 26px; line-height: 1; cursor: pointer; color: var(--accent); user-select: none; padding: 6px 10px; border-radius: 8px; background: transparent; margin: 0; }
+        .hamburger:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+
+        @media (max-width: 980px) {
+            .hamburger { display: block; }
+            body.has-app-shell { --sidebar-width: 252px; }
+            body.has-app-shell .container { padding-left: 20px; padding-right: 20px; }
+            .app-topbar {
+                left: 0;
+                padding-left: 16px;
+            }
+            .app-sidebar {
+                transform: translateX(-105%);
+                width: min(84vw, 280px) !important;
+                overflow: hidden;
+                transition: transform 0.22s ease;
+            }
+            body.sidebar-open .app-sidebar { transform: translateX(0); }
+            .sidebar-hover-bridge { display: none; }
+            .sidebar-pin { display: none !important; }
+            .sidebar-backdrop {
+                display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+                z-index: 1150; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+            }
+            body.sidebar-open .sidebar-backdrop { opacity: 1; pointer-events: auto; }
+        }
+
+        .box { background-color: var(--bg-box); color: var(--text-main); border-radius: var(--radius); padding: 24px; margin: 20px 0; border: var(--border); box-shadow: var(--shadow); transition: border-color 0.2s, box-shadow 0.2s; }
+        h1, h2 { color: var(--accent); letter-spacing: 0.01em; }
+        h1 { font-weight: 900; }
+        h2 { font-weight: 800; }
+        h3 { margin-top: 0; }
+        p { line-height: 1.5; }
+
+        button { background-color: var(--btn); color: white; border: none; padding: 11px 20px; font-size: 15px; border-radius: var(--radius-sm); cursor: pointer; margin-top: 10px; transition: 0.2s; font-weight: 700; letter-spacing: 0.01em; }
+        button:hover { background-color: var(--btn-hover); }
+        button:disabled { opacity: 0.55; cursor: not-allowed; }
+        .sidebar-pin { margin-top: 8px; background: transparent; color: var(--text-main); }
+        .sidebar-pin:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+        body.sidebar-pinned .sidebar-pin,
+        body.sidebar-pinned .sidebar-pin:hover {
+            background: color-mix(in srgb, var(--accent) 16%, transparent);
+            color: var(--accent);
+        }
+        .hamburger { background: transparent; color: var(--accent); margin: 0; padding: 6px 10px; }
+        .hamburger:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+        input, select { padding: 11px 14px; margin: 5px 0; border-radius: var(--radius-sm); border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent); width: 80%; background: var(--input-bg); color: var(--text-main); font-size: 16px; }
+        input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+        select option { background-color: var(--bg-box); color: var(--text-main); }
+
+        .avatar { width: 42px; height: 42px; border-radius: 50% !important; border: 2px solid var(--accent); cursor: pointer; object-fit: cover; transition: 0.2s; }
+        .avatar:hover { transform: scale(1.05); }
+        .player-card {
+            display: inline-flex; justify-content: center; align-items: center;
+            border-radius: 50% !important; line-height: 0; vertical-align: middle;
+        }
+        .player-card img { display: block; }
+        .topbar-profile .player-card { flex-shrink: 0; }
+
+        .dropdown-menu { display: none; position: absolute; right: 0; top: 56px; background: var(--bg-box); border: 1px solid var(--accent); border-radius: 14px; padding: 16px; width: 248px; box-shadow: 0 12px 28px rgba(0,0,0,0.6); text-align: left; z-index: 1300; }
+        .dropdown-menu label { font-size: 0.86em; font-weight: 800; color: var(--text-main); display: block; margin-bottom: 6px; opacity: 0.8; }
+        .dropdown-menu select { width: 100%; margin: 0; padding: 8px; }
+        .dropdown-menu .lang-field { margin-top: 12px; }
+        .dropdown-menu a { display: block; color: var(--text-main); text-decoration: none; padding: 8px 0; font-weight: 700; font-size: 0.98em; transition: 0.2s; }
+        .dropdown-menu a:hover { color: var(--accent); }
+        .dropdown-menu hr { border: 0; border-top: 1px solid var(--accent); opacity: 0.2; margin: 10px 0; }
+        .logout-link { color: #ff4c4c !important; }
+        .logout-link:hover { color: #ff1a1a !important; }
+
+        .modal-overlay { display: none; position: fixed; inset: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-close { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: var(--accent); font-weight: bold; transition: 0.2s; }
+        .modal-close:hover { color: #ff4c4c; }
+
+        #ore-dialog-overlay { z-index: 10000000; }
+        .ore-dialog-box {
+            position: relative; max-width: 400px; width: 90%; text-align: center; margin: 0;
+            border: 2px solid var(--accent); box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 55%, transparent);
+        }
+        .ore-dialog-box h3 { margin-top: 0; color: var(--accent); }
+        .ore-dialog-message { font-size: 1.1em; color: var(--text-main); margin: 15px 0; white-space: pre-wrap; word-break: break-word; }
+        .ore-dialog-actions { display: flex; gap: 10px; margin-top: 12px; }
+        .ore-dialog-actions button { flex: 1; width: auto; margin-top: 0; }
+        .ore-dialog-cancel { background: #ff4c4c !important; color: white !important; }
+        .ore-dialog-cancel:hover { background: #ff1a1a !important; }
+        #ore-dialog-input { width: 100%; margin: 8px 0 4px; }
+
+        .footer-right {
+            position: fixed; bottom: 15px; right: 20px;
+            color: var(--text-main); font-weight: bold; font-size: 1.1em;
+            pointer-events: none; text-align: right; line-height: 1.3;
+            z-index: 9999; margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+        }
+        .footer-alex {
+            display: block; height: 86px; width: auto;
+            margin: 0 0 2px; opacity: 0.95;
+            user-select: none; -webkit-user-drag: none;
+        }
+        .footer-credit { opacity: 0.6; }
+        .footer-dock {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999;
+            display: flex; align-items: center; gap: 14px;
+            padding: 0 18px 10px; pointer-events: none; box-sizing: border-box;
+        }
+        body.has-app-shell .footer-dock { padding-left: calc(var(--sidebar-collapsed) + 14px); }
+        .footer-dock .footer-right { position: static; bottom: auto; right: auto; flex-shrink: 0; }
+        
+        #python-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -100; overflow: hidden; pointer-events: none; background: var(--bg-main); }
+        #python-bg .ot-bg-art {
+            position: absolute; inset: -10%;
+            background-size: cover; background-position: center;
+            filter: blur(22px) saturate(1.25) brightness(0.55);
+            opacity: 0.28; transform: scale(1.08);
+            animation: otBgKen 48s ease-in-out infinite alternate;
+        }
+        #python-bg .ot-bg-wash {
+            position: absolute; inset: 0;
+            background:
+                radial-gradient(ellipse at 18% 8%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 52%),
+                radial-gradient(ellipse at 86% 92%, color-mix(in srgb, #FFD700 16%, transparent), transparent 48%),
+                radial-gradient(ellipse at 50% 110%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%),
+                linear-gradient(180deg, transparent 40%, color-mix(in srgb, var(--bg-main) 88%, #000) 100%);
+        }
+        #python-bg .ot-bg-grid {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px),
+                linear-gradient(90deg, color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px);
+            background-size: 64px 64px;
+            mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.5), transparent 78%);
+            opacity: 0.32;
+            animation: otBgGrid 50s linear infinite;
+        }
+        #python-bg .ot-bg-scan {
+            position: absolute; left: 0; right: 0; height: 28%;
+            background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 18%, transparent), transparent);
+            animation: otBgScan 9s linear infinite;
+            opacity: 0.35;
+        }
+        #python-bg canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+        @keyframes otBgKen { from { transform: scale(1.06) translate3d(0,0,0); } to { transform: scale(1.16) translate3d(0,-2%,0); } }
+        @keyframes otBgGrid { from { background-position: 0 0; } to { background-position: 64px 64px; } }
+        @keyframes otBgScan { from { top: -30%; } to { top: 110%; } }
+
+        /* --- GLOBAL ANIMATIONS FOR BORDERS --- */
+        @keyframes hackerFlicker {
+            0%, 48%, 52%, 100% { border-color: #3fb950; box-shadow: 0 0 15px #3fb950, inset 0 0 10px #3fb950; opacity: 1; }
+            50% { opacity: 0.4; box-shadow: none; border-color: #1a4d21; }
+            51% { opacity: 1; box-shadow: 0 0 25px #3fb950; }
+            54% { opacity: 0.6; }
+        }
+        .border-hacker { border: 4px solid #3fb950 !important; border-radius: 50% !important; animation: hackerFlicker 3s infinite; }
+
+        @keyframes goldPulse {
+            0%, 100% { border-color: #d4af37; box-shadow: 0 0 10px #d4af37; }
+            50% { border-color: #FFD700; box-shadow: 0 0 25px #FFD700, inset 0 0 15px #FFD700; }
+        }
+        .border-gold { border: 4px solid #FFD700 !important; border-radius: 50% !important; animation: goldPulse 2s infinite; }
+
+        @keyframes cosmosPulse {
+            0%, 100% { box-shadow: 0 0 20px #bb86fc; }
+            50% { box-shadow: 0 0 35px #ff00ff, inset 0 0 15px #3700b3; }
+        }
+        .border-cosmos-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background: linear-gradient(180deg, #0a0a2a, #3700b3, #ff00ff, #bb86fc);
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: cosmosPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes rgbScroll {
+            from { background-position: 50% 0%; }
+            to { background-position: 50% 100%; }
+        }
+        .border-giga-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background-image: linear-gradient(0deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+            background-size: 100% 200%;
+            background-repeat: repeat;
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: rgbScroll 6s linear infinite;
+            box-shadow: 0 0 18px rgba(255, 0, 0, 0.75), 0 0 28px rgba(0, 255, 255, 0.45);
+        }
+
+        @keyframes protocolScan {
+            0%, 100% { box-shadow: 0 0 12px #00e5ff, 0 0 22px rgba(255,0,170,0.35); }
+            50% { box-shadow: 0 0 26px #ff00aa, 0 0 18px #00e5ff; }
+        }
+        .border-protocol-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background: repeating-linear-gradient(135deg, #00e5ff 0 6px, #0a1020 6px 12px, #ff00aa 12px 18px, #0a1020 18px 24px);
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: protocolScan 2.4s ease-in-out infinite;
+        }
+
+        @keyframes orecorePulse {
+            0%, 100% { box-shadow: 0 0 14px #ff6a00, inset 0 0 8px #7a1a00; }
+            50% { box-shadow: 0 0 28px #ffd27a, 0 0 16px #ff3b00; }
+        }
+        .border-orecore-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background: radial-gradient(circle at 40% 30%, #ffe7a8, #ff6a00 45%, #3a0c00 80%);
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: orecorePulse 1.8s ease-in-out infinite;
+        }
+
+        .border-cyan-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background-image: linear-gradient(0deg, #FFD0DF, #FFC0D4, #FFB0C9, #FFC0D4, #FFD0DF, #FFC0D4, #FFB0C9, #FFC0D4, #FFD0DF);
+            background-size: 100% 200%;
+            background-repeat: repeat;
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: rgbScroll 6s linear infinite;
+            box-shadow: 0 0 16px rgba(255, 176, 201, 0.85), 0 0 26px rgba(255, 192, 212, 0.45);
+        }
+        @keyframes emberFlicker {
+            0%, 100% { border-color: #ff6a00; box-shadow: 0 0 12px #ff6a00; }
+            40% { border-color: #ff3b00; box-shadow: 0 0 22px #ff9a3a, inset 0 0 10px #7a1a00; }
+            55% { border-color: #3a0c00; box-shadow: none; }
+            70% { border-color: #ffb347; box-shadow: 0 0 18px #ff6a00; }
+        }
+        .border-ember { border: 4px solid #ff6a00 !important; border-radius: 50% !important; animation: emberFlicker 2.4s infinite; }
+        @keyframes frostPulse {
+            0%, 100% { border-color: #7ad7ff; box-shadow: 0 0 10px #7ad7ff; }
+            50% { border-color: #e8fbff; box-shadow: 0 0 24px #b9f0ff, inset 0 0 12px #1a4d66; }
+        }
+        .border-frost { border: 4px solid #7ad7ff !important; border-radius: 50% !important; animation: frostPulse 2.2s ease-in-out infinite; }
+
+        @keyframes voidHalo {
+            0%, 100% { box-shadow: 0 0 12px #5b2dff, inset 0 0 8px #120018; }
+            50% { box-shadow: 0 0 26px #a855f7, 0 0 10px #00ffc8; }
+        }
+        .border-void-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background: radial-gradient(circle at 50% 50%, #1a0a28, #5b2dff 55%, #050308 80%);
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: voidHalo 3s ease-in-out infinite;
+        }
+        @keyframes plasmaSpin {
+            from { filter: hue-rotate(0deg); }
+            to { filter: hue-rotate(360deg); }
+        }
+        .border-plasma-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background: conic-gradient(#ff2bd6, #00e5ff, #7c4dff, #ff2bd6);
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: plasmaSpin 5s linear infinite;
+            box-shadow: 0 0 16px rgba(255,43,214,0.45);
+        }
+        .border-aurora-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background-image: linear-gradient(135deg, #00ffa6, #00e5ff, #7c4dff, #00ffa6, #00e5ff);
+            background-size: 200% 200%;
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: rgbScroll 4.5s linear infinite;
+            box-shadow: 0 0 16px rgba(0,255,166,0.4);
+        }
+        @keyframes glitchRing {
+            0%, 88%, 100% { filter: none; }
+            90% { filter: hue-rotate(90deg) saturate(1.6); }
+            93% { filter: none; }
+            96% { filter: hue-rotate(-50deg); }
+        }
+        .border-glitch-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background: repeating-linear-gradient(90deg, #00ffc8 0 3px, #ff2bd6 3px 6px, #00e5ff 6px 9px, #111 9px 12px);
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: glitchRing 1.6s steps(2) infinite;
+        }
+        @keyframes obsidianShine {
+            0%, 100% { box-shadow: 0 0 10px #FFD700, inset 0 0 6px #111; }
+            50% { box-shadow: 0 0 24px #ffe38a, 0 0 12px #9a6b00; }
+        }
+        .border-obsidian-wrapper {
+            position: relative; padding: 4px; border-radius: 50% !important;
+            background: linear-gradient(145deg, #111, #FFD700 18%, #1a1200 42%, #c9a227 68%, #050505);
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: obsidianShine 2.4s ease-in-out infinite;
+        }
+        @keyframes apexSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .border-apex-wrapper {
+            position: relative; padding: 5px; border-radius: 50% !important;
+            display: inline-flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 18px rgba(255,215,0,0.5), 0 0 14px rgba(0,229,255,0.35);
+        }
+        .border-apex-wrapper::before {
+            content: ''; position: absolute; inset: 0; border-radius: 50%;
+            background: conic-gradient(#00e5ff, #FFD700, #ff6a00, #00e5ff);
+            animation: apexSpin 3.2s linear infinite;
+            z-index: 0;
+        }
+        .border-apex-wrapper > * { position: relative; z-index: 1; border-radius: 50%; }
+        @keyframes eclipsePulse {
+            0%, 100% { box-shadow: 0 0 10px #FFD700, 0 0 4px #000; }
+            50% { box-shadow: 0 0 28px #ffe38a, 0 0 16px #ff6a00; }
+        }
+        .border-eclipse-wrapper {
+            position: relative; padding: 5px; border-radius: 50% !important;
+            background: radial-gradient(circle at 50% 50%, #111 42%, #FFD700 56%, #1a0a00 72%, #000);
+            display: inline-flex; justify-content: center; align-items: center;
+            animation: eclipsePulse 2.2s ease-in-out infinite;
+        }
+
+        .founder-banner {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0a0018 !important;
+            background-image: none !important;
+        }
+        .founder-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 300%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            will-change: transform;
+            background-image: linear-gradient(90deg, #8a2be2, #191970, #ff00ff, #0a0018, #8a2be2);
+            background-size: 50% 100%;
+            background-repeat: repeat-x;
+            animation: bannerFlow 5s linear infinite;
+        }
+        .founder-text {
+            position: relative;
+            z-index: 1;
+            color: #eaff00;
+            font-size: 2.15em;
+            font-weight: 900;
+            text-shadow: 0 0 10px #eaff00, 0 0 20px rgba(234, 255, 0, 0.5);
+            letter-spacing: 2px;
+            pointer-events: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .pc-founder-label {
+            display: none;
+            margin: 0;
+            padding: 0;
+            color: #eaff00;
+            font-size: 0.9em;
+            font-weight: 800;
+            letter-spacing: 2px;
+            line-height: 1.15;
+            text-shadow: 0 0 10px #eaff00, 0 0 20px rgba(234, 255, 0, 0.5);
+            pointer-events: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        #playerCard.has-founder #pc-stats {
+            margin-bottom: 8px !important;
+        }
+        #playerCard.has-founder #pc-card-body {
+            padding-bottom: 12px !important;
+        }
+        #playerCard.has-founder #pc-steam-btn {
+            margin-top: 8px;
+        }
+
+        /* --- THE BANNER SYSTEM & TEXT PLACEMENTS --- */
+        .banner-container {
+            position: relative;
+        }
+        .sb-text { z-index: 2; }
+        /* Overlay sits in the visible strip ABOVE the overlapping avatar
+           (player card: 120px banner / 55px overlap ≈ 54%; edit: 110/50 ≈ 55%).
+           58% + flex center places the optical midpoint a bit lower than the
+           old top:32px (glow/uppercase looked cramped against the banner edge). */
+        .banner-text-base {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            width: 100%;
+            height: 58%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: none;
+            line-height: 1;
+            text-align: center;
+            pointer-events: none;
+            z-index: 5;
+            font-family: 'Segoe UI', sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        @keyframes slideLR {
+            from { background-position: 0% 50%; }
+            to { background-position: 100% 50%; }
+        }
+        @keyframes bannerFlow {
+            from { transform: translate3d(0, 0, 0); }
+            to { transform: translate3d(-50%, 0, 0); }
+        }
+        @keyframes bannerDrift {
+            from { transform: translate3d(0, 0, 0); }
+            to { transform: translate3d(-40%, 0, 0); }
+        }
+        .giga-banner-bg::before,
+        .aurora-banner::before,
+        .velvet-banner::before,
+        .molten-banner::before,
+        .genesis-banner::before,
+        .voidglitch-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            will-change: transform;
+        }
+        .giga-banner-bg::before,
+        .aurora-banner::before,
+        .velvet-banner::before,
+        .molten-banner::before,
+        .genesis-banner::before {
+            width: 200%;
+            background-repeat: repeat-x;
+            background-size: 50% 100%;
+            animation: bannerFlow linear infinite;
+        }
+
+        .banner-standard-text { color: white; font-size: 1.8em; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 0 5px rgba(0,0,0,0.5); -webkit-user-select: none; user-select: none; }
+        .banner-pro-text { font-size: 1.8em; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; -webkit-user-select: none; user-select: none; }
+        .banner-ultra-text { font-size: 1.8em; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; -webkit-user-select: none; user-select: none; }
+        
+        .giga-banner-bg {
+            background-color: #111 !important;
+            background-image: none !important;
+            overflow: hidden;
+        }
+        .giga-banner-bg::before {
+            animation-duration: 4s;
+            background-image: var(--giga-flow, linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff0000));
+        }
+        .banner-giga-text {
+            font-size: 1.8em; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;
+            background-image: linear-gradient(90deg, #ffffff, #aaaaaa, #ffffff, #aaaaaa, #ffffff);
+            background-size: 200% 100% !important;
+            background-repeat: repeat;
+            animation: slideLR 3s linear infinite !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            color: transparent !important;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        @keyframes voidHue {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(40deg); }
+        }
+        @keyframes voidGlitch {
+            0%, 88%, 100% { transform: none; opacity: 1; }
+            89% { transform: translate(-3px, 1px); opacity: 0.7; }
+            91% { transform: translate(4px, -2px); opacity: 1; }
+            93% { transform: translate(-6px, 0); opacity: 0.55; }
+            95% { transform: translate(2px, 3px); }
+        }
+        .voidglitch-banner {
+            background-color: #050308 !important;
+            background-image: none !important;
+            animation: voidHue 3.2s linear infinite;
+            overflow: hidden;
+        }
+        .voidglitch-banner::before {
+            width: 240%;
+            background-image: linear-gradient(110deg, #120018, #00ffc8 18%, #090014 40%, #ff2bd6 62%, #050308 85%, #7cff6b);
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            animation: bannerDrift 3.2s linear infinite alternate;
+        }
+        .voidglitch-banner::after {
+            content: '';
+            position: absolute; inset: 0;
+            background:
+                repeating-linear-gradient(0deg, rgba(0,255,180,0.12) 0 1px, transparent 1px 5px),
+                repeating-linear-gradient(180deg, rgba(0,0,0,0.35) 0 2px, transparent 2px 6px);
+            pointer-events: none; z-index: 1;
+        }
+        .banner-void-text {
+            font-size: 1.55em; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+            color: #d7ffe8; text-shadow: 3px 0 #ff2bd6, -3px 0 #00ffc8, 0 0 12px #7cff6b;
+            animation: voidGlitch 1.4s steps(2) infinite;
+            z-index: 6;
+        }
+        .nightbeacon-banner {
+            background: radial-gradient(circle at 50% 120%, rgba(255,60,60,0.55), transparent 55%),
+                linear-gradient(180deg, #070b14, #101828) !important;
+            overflow: hidden;
+        }
+        .nightbeacon-banner::before {
+            content: '';
+            position: absolute; left: 50%; top: -20%; width: 90px; height: 90px; margin-left: -45px;
+            background: radial-gradient(circle, #ff4c4c, transparent 68%);
+            animation: goldPulse 2.6s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .banner-beacon-text {
+            font-size: 1.15em; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase;
+            color: #9be7ff; text-shadow: 0 0 10px #00e5ff, 0 0 18px #ff4c4c;
+        }
+        .satmax-banner {
+            background: linear-gradient(120deg, #1a1200, #3b2200 30%, #0b0618 55%, #4a0030 80%, #1a1200) !important;
+            overflow: hidden;
+        }
+        .banner-satmax-text {
+            font-size: 1.05em; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;
+            background-image: linear-gradient(90deg, #ffe38a, #fff, #c77dff, #ffe38a, #fff, #c77dff, #ffe38a);
+            background-size: 200% 100%;
+            background-repeat: repeat;
+            animation: slideLR 4s linear infinite;
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .carbon-banner {
+            background: repeating-linear-gradient(135deg, #1c1c1c 0 8px, #2a2a2a 8px 16px) !important;
+            overflow: hidden;
+        }
+        .banner-carbon-text {
+            font-size: 1.35em; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase;
+            color: #cfcfcf; text-shadow: 0 0 8px rgba(255,255,255,0.25);
+        }
+        .emberwake-banner {
+            background: linear-gradient(90deg, #1a0500, #ff3b00 38%, #ffb347 72%, #3a0c00) !important;
+            overflow: hidden;
+        }
+        .banner-ember-text {
+            font-size: 1.25em; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase;
+            color: #ffe7a8; text-shadow: 0 0 10px #ff6a00, 0 0 18px #ff3b00;
+        }
+        .frostline-banner {
+            background: linear-gradient(90deg, #041018, #7ad7ff 45%, #e8fbff 72%, #0a2030) !important;
+            overflow: hidden;
+        }
+        .banner-frost-text {
+            font-size: 1.25em; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase;
+            color: #041018; text-shadow: 0 0 10px #e8fbff;
+        }
+        .ion-banner {
+            background: linear-gradient(110deg, #001018, #00e5ff 28%, #7c4dff 72%, #001018) !important;
+            overflow: hidden;
+        }
+        .banner-ion-text {
+            font-size: 1.25em; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+            color: #e8fbff; text-shadow: 0 0 12px #00e5ff, 0 0 18px #7c4dff;
+        }
+        .acidvein-banner {
+            background:
+                repeating-linear-gradient(118deg, transparent 0 16px, rgba(184,255,0,0.28) 16px 18px),
+                linear-gradient(105deg, #041000, #102800 38%, #3d5a00 50%, #0a1800 64%, #020800) !important;
+            overflow: hidden;
+        }
+        .banner-acid-text {
+            font-size: 1.25em; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase;
+            color: #d4ff6a; text-shadow: 0 0 10px #b8ff00, 0 0 18px #3a5a00;
+        }
+        .aurora-banner {
+            background-color: #041a12 !important;
+            background-image: none !important;
+            overflow: hidden;
+        }
+        .aurora-banner::before {
+            animation-duration: 5s;
+            background-image: linear-gradient(90deg, #041a12, #00ffa6, #7c4dff, #00e5ff, #041a12);
+        }
+        .banner-aurora-text {
+            font-size: 1.3em; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase;
+            color: #f4fff8; text-shadow: 0 0 10px #00ffa6;
+        }
+        .velvet-banner {
+            background-color: #14000c !important;
+            background-image: none !important;
+            overflow: hidden;
+        }
+        .velvet-banner::before {
+            animation-duration: 6.5s;
+            background-image: linear-gradient(90deg, #14000c, #6b0838 28%, #ff2d78 52%, #3a001c 78%, #0e0008);
+        }
+        .velvet-banner::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background: repeating-linear-gradient(180deg, rgba(255,80,140,0.14) 0 1px, transparent 1px 7px);
+        }
+        .banner-velvet-text {
+            font-size: 1.25em; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+            color: #ffd0e4; text-shadow: 0 0 10px #ff2d78, 0 0 18px #6b0838;
+        }
+        .molten-banner {
+            background-color: #2a0a00 !important;
+            background-image: none !important;
+            overflow: hidden;
+        }
+        .molten-banner::before {
+            animation-duration: 3.5s;
+            background-image: linear-gradient(90deg, #2a0a00, #ff6a00, #ffd27a, #ff3b00, #2a0a00);
+        }
+        .banner-molten-text {
+            font-size: 1.3em; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+            color: #fff3d6; text-shadow: 0 0 12px #ff6a00;
+        }
+        .dawnveil-banner {
+            background: linear-gradient(180deg, #1a1030, #ff6a88 42%, #ffcc70 82%) !important;
+            overflow: hidden;
+        }
+        .banner-dawn-text {
+            font-size: 1.2em; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase;
+            color: #fff7e8; text-shadow: 0 0 10px #ff6a88, 0 0 16px #1a1030;
+        }
+        .genesis-banner {
+            background:
+                radial-gradient(80% 120% at 50% 120%, rgba(255, 196, 80, 0.28), transparent 58%),
+                linear-gradient(180deg, #3a2a14 0%, #1a120c 42%, #0c090b 100%) !important;
+            overflow: hidden;
+        }
+        .genesis-banner::before {
+            animation-duration: 8s;
+            background-image: linear-gradient(90deg,
+                rgba(255, 220, 140, 0) 0%,
+                rgba(255, 232, 170, 0.12) 25%,
+                rgba(255, 248, 220, 0.5) 50%,
+                rgba(255, 232, 170, 0.12) 75%,
+                rgba(255, 220, 140, 0) 100%);
+        }
+        .genesis-banner::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg, rgba(255, 230, 170, 0.18), transparent 38%),
+                linear-gradient(180deg, transparent 46%, rgba(255, 210, 110, 0.55) 50%, transparent 54%);
+            box-shadow: inset 0 0 0 1px rgba(255, 210, 120, 0.28);
+        }
+        .banner-genesis-text {
+            font-size: 1.2em; font-weight: 900; letter-spacing: 0.28em; text-transform: uppercase;
+            color: #fff6dd;
+            text-shadow: 0 1px 0 rgba(60, 30, 0, 0.55), 0 0 16px rgba(255, 200, 80, 0.45);
+            z-index: 6;
+        }
+
+        .pc-season-badge {
+            display: none; margin: 0 auto 12px; padding: 4px 12px; border-radius: 999px;
+            border: 1px solid #00e5ff; color: #00e5ff; font-size: 0.72em; font-weight: 800;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            background: rgba(0,229,255,0.08); box-shadow: 0 0 12px rgba(0,229,255,0.25);
+        }
+        .pc-xp-wrap { display: none; margin: 0 0 16px; text-align: left; }
+        .pc-xp-meta { display: flex; justify-content: space-between; font-size: 0.72em; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; margin-bottom: 6px; }
+        .pc-xp-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; border: 1px solid rgba(0,229,255,0.25); }
+        .pc-xp-fill { height: 100%; width: 0; background: linear-gradient(90deg, #00e5ff, #ff00aa); box-shadow: 0 0 10px rgba(0,229,255,0.5); }
+        .pc-recent { display: none; text-align: left; background: rgba(0,0,0,0.28); border: 1px solid rgba(102,192,244,0.25); border-radius: 8px; padding: 8px 10px; margin-bottom: 16px; font-size: 0.82em; }
+        .pc-recent strong { color: #66c0f4; }
+        .color-group { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; width: 48%; }
+        .color-group label { font-size: 0.75em; opacity: 0.8; font-weight: bold; color: white; text-align: left; }
+        .color-group input[type="color"] { width: 100%; height: 30px; padding: 0; border: none; border-radius: 4px; cursor: pointer; background: transparent; }
+
+        /* --- SHARED PAGE SYSTEM --- */
+        .page-header { margin: 0 0 28px; }
+        .page-header h1 { margin: 0 0 8px; font-size: clamp(1.7em, 4vw, 2.35em); color: var(--accent); text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 40%, transparent); }
+        .page-sub { margin: 0; font-size: 1.05em; color: var(--muted); line-height: 1.5; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+        .cmd-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+        .cmd-span-12 { grid-column: span 12; }
+        .cmd-span-8 { grid-column: span 8; }
+        .cmd-span-7 { grid-column: span 7; }
+        .cmd-span-6 { grid-column: span 6; }
+        .cmd-span-5 { grid-column: span 5; }
+        .cmd-span-4 { grid-column: span 4; }
+        .cmd-grid > .box { margin: 0; height: 100%; }
+        @media (max-width: 900px) {
+            .cmd-span-8, .cmd-span-7, .cmd-span-6, .cmd-span-5, .cmd-span-4 { grid-column: span 12; }
+        }
+        .star-btn { background: transparent; color: #FFD700; padding: 0 4px; margin: 0; font-size: 1.25em; }
+        .star-btn:hover { background: transparent; transform: scale(1.15); color: #FFD700; }
+        .star-btn[disabled] { opacity: 1; }
+        .setup-photo { width: 100%; border-radius: 10px; max-height: 220px; object-fit: cover; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+        .clip-embed { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; background: #000; }
+        .card-grid > .box { margin: 0; }
+        .section-title { text-align: left; color: var(--text-main); border-bottom: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); padding-bottom: 10px; margin: 8px 0 18px; font-size: 1.2em; }
+        .muted { opacity: 0.72; }
+        .form-stack { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+        .form-stack input, .form-stack select { width: 100%; margin: 6px 0 0; }
+        .form-label { display: block; font-weight: 800; font-size: 0.92em; color: var(--accent); }
+        .btn-full { width: 100%; margin-top: 8px; padding: 13px; font-size: 1.05em; }
+        .btn-ghost { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        .btn-ghost:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+        .btn-discord { width: 100%; padding: 15px; font-size: 1.12em; display: flex; align-items: center; justify-content: center; gap: 10px; background-color: #5865F2 !important; color: white; box-shadow: 0 6px 20px rgba(88, 101, 242, 0.38); margin-top: 0; }
+        .btn-discord:hover { background-color: #4752c4 !important; }
+        .discord-cta { text-decoration: none; display: block; }
+
+        .tab-container { display: flex; justify-content: center; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
+        .tab-btn { background: var(--bg-box); color: var(--text-main); border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 1em; transition: 0.2s; margin-top: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+        .tab-btn:hover { border-color: var(--accent); transform: translateY(-2px); color: var(--accent); background: var(--bg-box); }
+        .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .tab-btn.active:hover { background: var(--accent); color: #fff; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease-out; }
+        .tab-content.active { display: block; }
+        .tab-container.tabs-gold .tab-btn:hover { border-color: #FFD700; color: #FFD700; }
+        .tab-container.tabs-gold .tab-btn.active { background: #FFD700; color: #111; border-color: #FFD700; }
+        .tab-container.tabs-gold .tab-btn.active:hover { background: #FFD700; color: #111; }
+
+        .welcome-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; text-align: left; padding: 20px 22px; margin: 0 0 22px; }
+        .welcome-bar h1 { margin: 0; font-size: 1.4em; }
+        .welcome-meta { display: flex; align-items: center; gap: 14px; }
+        .welcome-meta img { width: 58px; height: 58px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; }
+        .countdown-chip { margin: 14px 0; padding: 12px; background: var(--input-bg); border-radius: 10px; font-weight: 800; text-align: center; border: 1px dashed var(--accent); font-size: 1.05em; }
+        .season-cd {
+            font-variant-numeric: tabular-nums;
+        }
+        .season-cd-label {
+            font-size: 0.62em; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 800;
+            color: var(--accent); opacity: 0.9; white-space: nowrap;
+        }
+        .season-cd-live { display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap; }
+        .season-cd-cell {
+            min-width: 46px; text-align: center; padding: 6px 8px;
+            background: rgba(0,0,0,0.5); border-radius: 10px;
+            border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+        }
+        .season-cd-cell span[data-unit] {
+            display: block; font-weight: 900; line-height: 1.1; color: var(--accent);
+            text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent);
+        }
+        .season-cd-cell label {
+            display: block; margin-top: 2px; font-size: 0.58em; letter-spacing: 0.14em;
+            text-transform: uppercase; opacity: 0.7; font-weight: 800;
+        }
+        .season-cd-ended {
+            font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+            color: rgba(255,255,255,0.72);
+        }
+        .season-cd.is-ended .season-cd-live { display: none; }
+        .season-cd.is-ended .season-cd-label,
+        .season-cd.is-ended .season-cd-head { display: none; }
+        .season-cd--chip {
+            display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            padding: 6px 10px; border-radius: 12px;
+            background: rgba(0,0,0,0.45);
+            border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+            backdrop-filter: blur(8px);
+        }
+        .season-cd--chip .season-cd-cell { min-width: 38px; padding: 4px 6px; }
+        .season-cd--chip .season-cd-cell span[data-unit] { font-size: 1.05em; }
+        .season-cd--pass {
+            margin: 0 0 18px; padding: 14px 16px; border-radius: 14px; text-align: left;
+            background: rgba(0,0,0,0.38);
+            border: 1px solid color-mix(in srgb, #FFD700 32%, transparent);
+            box-shadow: inset 0 0 22px rgba(255,215,0,0.06);
+        }
+        .season-cd--pass .season-cd-head {
+            display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .season-cd--pass .season-cd-head strong { color: #FFD700; letter-spacing: 0.06em; text-transform: uppercase; }
+        .season-cd--pass .season-cd-cell { flex: 1; min-width: 64px; padding: 10px 6px; }
+        .season-cd--pass .season-cd-cell span[data-unit] { font-size: clamp(1.25em, 3.4vw, 1.85em); }
+        .home-credit { margin: 40px auto 8px; padding: 16px 22px; background: linear-gradient(145deg, var(--bg-box), color-mix(in srgb, var(--bg-main) 70%, black)); border-top: 2px solid var(--accent); border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: var(--shadow); text-align: left; }
+        .loc-chip { background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 8px; border: 1px dashed var(--accent); }
+
+        .radar-btn { padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: 800; transition: 0.2s; background: transparent; margin-top: 0; }
+        .radar-btn:hover { background: transparent; }
+        .btn-yes { border: 2px solid #4CAF50; color: #4CAF50; }
+        .btn-yes.active, .btn-yes:hover { background: rgba(76, 175, 80, 0.2); }
+        .btn-maybe { border: 2px solid #FFC107; color: #FFC107; }
+        .btn-maybe.active, .btn-maybe:hover { background: rgba(255, 193, 7, 0.2); }
+        .btn-no { border: 2px solid #F44336; color: #F44336; }
+        .btn-no.active, .btn-no:hover { background: rgba(244, 67, 54, 0.2); }
+        .radar-avatars { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        .radar-avatars img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; cursor: pointer; }
+        .radar-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        @media (max-width: 700px) { .radar-cols { grid-template-columns: 1fr; } }
+        .radar-col { border-radius: 12px; padding: 14px; }
+        .radar-col.in { background: rgba(76, 175, 80, 0.1); border: 1px solid #4CAF50; }
+        .radar-col.maybe { background: rgba(255, 193, 7, 0.1); border: 1px solid #FFC107; }
+        .radar-col.out { background: rgba(244, 67, 54, 0.1); border: 1px solid #F44336; }
+
+        .ot-radar-scan, .ev-radar-scan {
+            position: absolute; left: 0; right: 0; height: 2px; pointer-events: none; z-index: 1;
+            background: linear-gradient(90deg, transparent, #4CAF50, transparent);
+            animation: radar-scanline 6s ease-in-out infinite alternate;
+            opacity: 0.7;
+        }
+        @keyframes radar-scanline {
+            from { top: 8px; }
+            to { top: calc(100% - 8px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .ot-radar-scan, .ev-radar-scan, .ot-bg-art, .ot-bg-grid, .ot-bg-scan { animation: none; }
+        }
+
+        .watchout-card { background: linear-gradient(145deg, #2a0808, var(--bg-box)); border: 1px solid #ff4c4c; padding: 20px; width: 260px; position: relative; overflow: hidden; text-align: left; }
+        .alert-lock { background: #ff4c4c; color: white; padding: 14px 18px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(255,0,0,0.28); }
+        .alert-lock h2 { margin: 0; font-size: 1.35em; color: white; }
+        .alert-ok { background: #3fb950; color: white; padding: 14px; border-radius: 10px; margin-bottom: 18px; text-align: center; font-weight: 800; }
+
+        .landing-wrap { min-height: 68vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 0 40px; }
+        .landing-kicker { letter-spacing: 0.22em; text-transform: uppercase; font-size: 0.76em; font-weight: 800; color: var(--accent); opacity: 0.88; margin: 0 0 12px; }
+        .landing-title { font-size: clamp(2.4em, 8vw, 4.1em); margin: 0 0 10px; letter-spacing: 0.08em; font-weight: 900; text-shadow: 0 0 28px color-mix(in srgb, var(--accent) 55%, transparent); }
+        .landing-lead { max-width: 520px; margin: 0 0 28px; }
+        .landing-card { max-width: 460px; width: 100%; padding: 36px 28px; margin: 0; }
+
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th, .data-table td { padding: 12px 10px; text-align: left; }
+        .data-table th { border-bottom: 1px solid var(--accent); font-size: 0.78em; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
+        .data-table tr { border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .icon-btn { background: transparent !important; color: #ff4c4c; padding: 0 !important; margin: 0 !important; font-size: 1.2em; box-shadow: none; }
+        .icon-btn:hover { transform: scale(1.1); background: transparent !important; }
+
+        .shop-hero { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; text-align: left; }
+        .shop-hero h1 { margin: 0; color: #FFD700; font-size: clamp(1.7em, 4vw, 2.4em); text-shadow: 0 0 15px rgba(255,215,0,0.4); }
+        .balance-chip { background: rgba(0,0,0,0.4); border: 2px solid #FFD700; padding: 10px 18px; border-radius: 12px; display: flex; align-items: center; gap: 10px; }
+
+        .timeline-item { border-left: 3px solid var(--accent); padding-left: 22px; position: relative; margin-bottom: 36px; }
+        .timeline-item.past { border-left-color: rgba(255,255,255,0.2); }
+        .timeline-dot { position: absolute; left: -9px; top: 6px; width: 15px; height: 15px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); }
+        .timeline-item.past .timeline-dot { background: rgba(255,255,255,0.25); box-shadow: none; }
+
+        .history-row { margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-left: 4px solid var(--accent); text-align: left; }
+        .stat-pill { background: rgba(255, 215, 0, 0.2); color: #ffd700; padding: 4px 10px; border-radius: 20px; font-weight: 800; }
+
+        .armory-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 640px) { .armory-form { grid-template-columns: 1fr; } .armory-form .btn-full { grid-column: auto; } }
+        .gear-card { text-align: left; border-left: 4px solid #00e5ff; }
+        .gear-card ul { list-style: none; padding: 0; margin: 0; line-height: 1.85; }
+    </style>
+</head>
+<body{% if session.get('user_id') %} class="has-app-shell"{% endif %} data-season-ends-ms="{{ season_ends_ms|default(0) }}" data-server-now-ms="{{ server_now_ms|default(0) }}" data-ot-user="{{ session.get('username', '') }}" data-ot-steam="{{ user_steam_id or '' }}">
+{% if session.get('user_id') %}
+<script>
+try { if (localStorage.getItem('ot_sidebar_pinned') === '1') document.body.classList.add('sidebar-pinned'); } catch (e) {}
+</script>
+{% endif %}
+
+    {% if session.get('user_id') %}
+    {% set path = request.path %}
+    <aside class="app-sidebar" id="app-sidebar">
+        <a href="/home" class="sidebar-brand">
+            <span class="sidebar-logo">⚡</span>
+            <span class="sidebar-brand-text">ORETIMERS</span>
+        </a>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-label side-section">🏠 <span data-i18n="nav.homepage">{{ t('nav.homepage') }}</span></div>
+                <a href="/home" class="side-link{% if path == '/home' %} active{% endif %}"><span class="side-ico">🏠</span><span class="side-txt" data-i18n="nav.oretime">{{ t('nav.oretime') }}</span></a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-label side-section">🎮 <span data-i18n="nav.gamingHub">{{ t('nav.gamingHub') }}</span></div>
+                <a href="/events" class="side-link{% if path == '/events' %} active{% endif %}"><span class="side-ico">🗳️</span><span class="side-txt" data-i18n="nav.events">{{ t('nav.events') }}</span></a>
+                <a href="/history" class="side-link{% if path == '/history' %} active{% endif %}"><span class="side-ico">📜</span><span class="side-txt" data-i18n="nav.history">{{ t('nav.history') }}</span></a>
+                <a href="/roulette" class="side-link{% if path == '/roulette' %} active{% endif %}"><span class="side-ico">🎲</span><span class="side-txt" data-i18n="nav.roulette">{{ t('nav.roulette') }}</span></a>
+                <a href="/rivals" class="side-link{% if path.startswith('/rivals') %} active{% endif %}"><span class="side-ico">⚔️</span><span class="side-txt" data-i18n="nav.rivals">{{ t('nav.rivals') }}</span></a>
+                <a href="/library" class="side-link{% if path.startswith('/library') %} active{% endif %}"><span class="side-ico">📚</span><span class="side-txt" data-i18n="nav.library">{{ t('nav.library') }}</span></a>
+                <a href="/pass" class="side-link{% if path == '/pass' or path == '/battlepass' %} active{% endif %}"><span class="side-ico">📡</span><span class="side-txt" data-i18n="nav.battlePass">{{ t('nav.battlePass') }}</span></a>
+                <a href="/endgame" class="side-link{% if path.startswith('/endgame') %} active{% endif %}"><span class="side-ico">🌙</span><span class="side-txt">Endgame</span></a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-label side-section">🌍 <span data-i18n="nav.community">{{ t('nav.community') }}</span></div>
+                <a href="/watchout" class="side-link{% if path == '/watchout' %} active{% endif %}"><span class="side-ico">🚨</span><span class="side-txt" data-i18n="nav.watchout">{{ t('nav.watchout') }}</span></a>
+                <a href="/oretimers" class="side-link{% if path == '/oretimers' %} active{% endif %}"><span class="side-ico">🌟</span><span class="side-txt" data-i18n="nav.oretimers">{{ t('nav.oretimers') }}</span></a>
+                <a href="/armory" class="side-link{% if path == '/armory' %} active{% endif %}"><span class="side-ico">🖥️</span><span class="side-txt" data-i18n="nav.pcStats">{{ t('nav.pcStats') }}</span></a>
+                <a href="/wishlist" class="side-link{% if path == '/wishlist' or path == '/requests' %} active{% endif %}"><span class="side-ico">💡</span><span class="side-txt" data-i18n="nav.wishlist">{{ t('nav.wishlist') }}</span></a>
+                <a href="/highlights" class="side-link{% if path.startswith('/highlights') %} active{% endif %}"><span class="side-ico">🎬</span><span class="side-txt" data-i18n="nav.highlights">{{ t('nav.highlights') }}</span></a>
+                <a href="/quests" class="side-link{% if path.startswith('/quests') %} active{% endif %}"><span class="side-ico">🎯</span><span class="side-txt" data-i18n="nav.quests">{{ t('nav.quests') }}</span></a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-label side-section">🛒 <span data-i18n="nav.shopSection">{{ t('nav.shopSection') }}</span></div>
+                <a href="/shop" class="side-link side-shop{% if path == '/shop' %} active{% endif %}"><span class="side-ico">🛒</span><span class="side-txt" data-i18n="nav.shop">{{ t('nav.shop') }}</span></a>
+                <a href="/inventory" class="side-link side-shop{% if path == '/inventory' %} active{% endif %}"><span class="side-ico">🎒</span><span class="side-txt" data-i18n="nav.yourLoot">{{ t('nav.yourLoot') }}</span></a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-label side-section">⚙️ <span data-i18n="nav.system">{{ t('nav.system') }}</span></div>
+                <a href="/status" class="side-link{% if path == '/status' %} active{% endif %}"><span class="side-ico">💻</span><span class="side-txt" data-i18n="nav.status">{{ t('nav.status') }}</span></a>
+                <a href="/changelog" class="side-link{% if path == '/changelog' %} active{% endif %}"><span class="side-ico">🚀</span><span class="side-txt" data-i18n="nav.changelog">{{ t('nav.changelog') }}</span></a>
+            </div>
+
+            {% if is_admin %}
+            <div class="nav-section">
+                <div class="nav-section-label side-section" data-i18n="nav.admin">{{ t('nav.admin') }}</div>
+                <a href="/admin" class="side-link{% if path.startswith('/admin') %} active{% endif %}"><span class="side-ico">⚙️</span><span class="side-txt" data-i18n="nav.admin">{{ t('nav.admin') }}</span></a>
+            </div>
+            {% endif %}
+        </nav>
+        <button type="button" class="sidebar-pin" id="sidebar-pin" aria-pressed="false" title="Pin sidebar">
+            <span class="side-ico" aria-hidden="true">📌</span>
+            <span class="side-txt" id="sidebar-pin-label">Pin</span>
+        </button>
+        <div class="sidebar-hover-bridge" aria-hidden="true"></div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <header class="app-topbar">
+        <button type="button" class="hamburger" id="hamburger-btn" data-i18n-aria="nav.openMenu" aria-label="{{ t('nav.openMenu') }}">☰</button>
+        <div class="topbar-spacer"></div>
+        <button type="button" id="nav-daily-btn" class="nav-daily" onclick="claimDailyOre(this)" {% if not nav_daily.available %}disabled{% endif %}>
+            {% if nav_daily.available %}{% if nav_daily.welkin_active %}🌙 {% endif %}☀️ <span data-i18n="nav.daily">{{ t('nav.daily') }}</span>{% else %}✓ {{ nav_daily.streak }}/7{% endif %}
+        </button>
+        <a href="/shop" class="nav-oc" data-i18n-title="nav.vault" title="{{ t('nav.vault') }}">
+            <span>🪙</span>
+            <span class="js-oc-balance" id="nav-oc-balance">{{ nav_ore_coins }}</span>
+            <span>OC</span>
+        </a>
+        <div class="topbar-profile">
+            <span class="player-card {{ border_wrap_class(nav_active_border) }}" id="nav-avatar-wrap" data-player-username="{{ session.get('username', '') }}" data-player-steam="{{ user_steam_id }}" data-active-border="{{ nav_active_border }}" data-default-border="2px solid var(--accent)">
+                <img src="{{ user_avatar }}" alt="Profile" class="avatar {{ border_img_class(nav_active_border) }}" id="avatar-btn"{% if border_wrap_class(nav_active_border) %} style="border:none;"{% endif %}>
+            </span>
+            <div class="dropdown-menu" id="profile-dropdown">
+                <form action="/profile" method="POST" id="theme-form">
+                    <label data-i18n="nav.theme">{{ t('nav.theme') }}</label>
+                    <select name="theme" onchange="this.form.submit()">
+                        <option value="pink" {% if theme == 'pink' %}selected{% endif %} data-i18n="theme.pink">{{ t('theme.pink') }}</option>
+                        <option value="dark" {% if theme == 'dark' %}selected{% endif %} data-i18n="theme.dark">{{ t('theme.dark') }}</option>
+                        <option value="hacker" {% if theme == 'hacker' %}selected{% endif %} data-i18n="theme.hacker">{{ t('theme.hacker') }}</option>
+                        <option value="ocean" {% if theme == 'ocean' %}selected{% endif %} data-i18n="theme.ocean">{{ t('theme.ocean') }}</option>
+                        <option value="cyberpunk" {% if theme == 'cyberpunk' %}selected{% endif %} data-i18n="theme.cyberpunk">{{ t('theme.cyberpunk') }}</option>
+                        <option value="sunset" {% if theme == 'sunset' %}selected{% endif %} data-i18n="theme.sunset">{{ t('theme.sunset') }}</option>
+                    </select>
+                </form>
+                <div class="lang-field">
+                    <label for="ot-lang-select" data-i18n="nav.language">{{ t('nav.language') }}</label>
+                    <select id="ot-lang-select">
+                        <option value="en"{% if ui_lang == 'en' %} selected{% endif %}>English</option>
+                        <option value="de"{% if ui_lang == 'de' %} selected{% endif %}>Deutsch</option>
+                        <option value="pl"{% if ui_lang == 'pl' %} selected{% endif %}>Polski</option>
+                        <option value="cs"{% if ui_lang == 'cs' %} selected{% endif %}>Čeština</option>
+                        <option value="hr"{% if ui_lang == 'hr' %} selected{% endif %}>Hrvatski</option>
+                        <option value="fr"{% if ui_lang == 'fr' %} selected{% endif %}>Français</option>
+                        <option value="ja"{% if ui_lang == 'ja' %} selected{% endif %}>日本語</option>
+                    </select>
+                </div>
+                <hr>
+                <a href="#" id="open-steam-modal">👤 <span data-i18n="nav.editProfile">{{ t('nav.editProfile') }}</span></a>
+                <a href="#" id="open-credits-modal">🎬 <span data-i18n="nav.credits">{{ t('nav.credits') }}</span></a>
+                <hr>
+                <a href="/logout" class="logout-link">🚪 <span data-i18n="nav.logout">{{ t('nav.logout') }}</span></a>
+            </div>
+        </div>
+    </header>
+    {% endif %}
+
+    <div id="steam-modal" class="modal-overlay">
+        <div class="box" style="position: relative; width: 95%; max-width: 380px; margin: 0; padding: 0; text-align: left; border-radius: 16px; overflow: hidden; border: 2px solid var(--accent); background: var(--bg-box); box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+
+            <div id="edit-banner-preview" class="banner-container" style="height: 110px; transition: background 0.3s; background: #1a1a1a;"></div>
+            
+            <span class="modal-close" id="close-steam-modal" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; font-size: 1.2em; cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 10;">✖</span>
+            
+            <div style="margin: -50px auto 10px auto; display: flex; justify-content: center; align-items: center; position: relative; z-index: 2;">
+                <div id="edit-avatar-wrapper" style="border-radius: 50% !important;">
+                    <img id="edit-pc-avatar" src="{{ user_avatar }}" style="width: 100px; height: 100px; border-radius: 50% !important; object-fit: cover; display: block; background: #111; border: 4px solid var(--bg-box);">
+                </div>
+            </div>
+            
+            <div style="padding: 0 20px 20px 20px; text-align: center;">
+                <h2 id="edit-profile-name" style="margin: 0 0 5px 0; color: white; font-size: 1.7em; font-weight: 800;">{{ session.get('discord_name') or session.get('username') }}</h2>
+                
+                <div id="edit-custom-title-display" style="display: none; color: #ff4c4c; font-weight: bold; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;"></div>
+                
+                <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <div id="edit-discord-badge" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(88, 101, 242, 0.15); border: 1px solid #5865F2; color: #5865F2; padding: 4px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; transition: 0.3s;">
+                        <div id="edit-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #747f8d;"></div>
+                        <svg width="12" height="12" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14c2.64-27.38-4.51-51.11-19.32-72.15ZM42.49,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.49,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.2,46,96.09,53,91.08,65.69,84.73,65.69Z"/></svg>
+                        <span id="edit-discord-handle">{{ session.get('discord_name', session.get('username')) }}</span>
+                    </div>
+                    <div id="edit-steam-badge" style="display: none; align-items: center; gap: 6px; background: rgba(102, 192, 244, 0.15); border: 1px solid #66c0f4; color: #66c0f4; padding: 4px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold;">
+                        <span>🎮</span> <span id="edit-steam-name">Steam</span>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; margin: 0 0 15px 0; padding: 15px 0; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08);">
+                    <div style="border-right: 1px solid rgba(255,255,255,0.08);">
+                        <span style="display: block; font-size: 1.6em; font-weight: 900; color: var(--accent);" id="edit-votes">...</span>
+                        <span style="opacity: 0.6; font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;" data-i18n="profile.totalVotes">{{ t('profile.totalVotes') }}</span>
+                    </div>
+                    <div style="border-right: 1px solid rgba(255,255,255,0.08); overflow: hidden;">
+                        <span style="display: block; font-size: 1.1em; font-weight: bold; color: white; margin-top: 5px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; padding: 0 5px;" id="edit-favgame">...</span>
+                        <span style="opacity: 0.6; font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-top: 5px; display: block;" data-i18n="profile.topGame">{{ t('profile.topGame') }}</span>
+                    </div>
+                    <div>
+                        <span style="display: block; font-size: 1.6em; font-weight: 900; color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.4);" id="edit-coins">...</span>
+                        <span style="opacity: 0.6; font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;" data-i18n="pass.orecoins">{{ t('pass.orecoins') }}</span>
+                    </div>
+                </div>
+
+                <form action="/profile" method="POST" id="edit-profile-form" style="text-align: left;">
+                    
+                    <div id="edit-title-group" style="display: {% if nav_owns_title %}block{% else %}none{% endif %}; margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 3px; font-weight: bold; font-size: 0.8em; opacity: 0.7; color: #ff4c4c;" data-i18n="profile.customTitle">{{ t('profile.customTitle') }}</label>
+                        <input type="text" name="custom_title" id="edit-custom-title" value="{{ nav_custom_title }}" data-i18n-placeholder="profile.titlePlaceholder" placeholder="{{ t('profile.titlePlaceholder') }}" style="width: 100%; margin: 0; padding: 8px; font-size: 0.9em; background: rgba(0,0,0,0.3); border: 1px solid #ff4c4c; color: #ff4c4c;">
+                    </div>
+
+                    <!-- NEUES BORDER UND BANNER DROPDOWN SYSTEM -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                        <div style="width: 50%;">
+                            <label style="display: block; margin-bottom: 3px; font-weight: bold; font-size: 0.8em; opacity: 0.7;" data-i18n="profile.avatarBorder">{{ t('profile.avatarBorder') }}</label>
+                            <select name="active_border" id="edit-border-select" onchange="onEditBorderChange()" style="width: 100%; margin: 0; padding: 8px; font-size: 0.85em; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white;">
+                                <option value="" data-i18n="common.none">{{ t('common.none') }}</option>
+                                {% for b in nav_borders %}
+                                <option value="{{ b }}" {% if b == nav_active_border %}selected{% endif %}>{{ cosmetic_labels.get(b, b|upper) }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div style="width: 50%;">
+                            <label style="display: block; margin-bottom: 3px; font-weight: bold; font-size: 0.8em; opacity: 0.7;" data-i18n="profile.profileBanner">{{ t('profile.profileBanner') }}</label>
+                            <select name="active_banner" id="edit-banner-select" onchange="onEditBannerChange()" style="width: 100%; margin: 0; padding: 8px; font-size: 0.85em; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white;">
+                                <option value="default" {% if nav_active_banner == 'default' %}selected{% endif %} data-i18n="common.default">{{ t('common.default') }}</option>
+                                {% for b in nav_owned_banners %}
+                                <option value="{{ b }}" {% if b == nav_active_banner %}selected{% endif %}>{{ cosmetic_labels.get(b, b|upper) }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- DYNAMISCHE FARBWÄHLER FÜR DAS GEWÄHLTE BANNER -->
+                    <div id="banner-controls" style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); display: none;">
+                        
+                        <div id="bc-standard" style="display: none; flex-wrap: wrap; justify-content: space-between;">
+                            <div class="color-group" style="width:100%"><label data-i18n="profile.bgColor">{{ t('profile.bgColor') }}</label><input type="color" name="bg_color" id="i_bg_color" value="{{ nav_banner_config.get('bg_color', '#1a1a1a') }}" onchange="liveUpdatePreview()"></div>
+                        </div>
+
+                        <div id="bc-pro" style="display: none; flex-wrap: wrap; justify-content: space-between;">
+                            <div class="color-group" style="width:100%"><label data-i18n="profile.textGlow">{{ t('profile.textGlow') }}</label><input type="color" name="text_glow" id="i_text_glow" value="{{ nav_banner_config.get('text_glow', '#ff0000') }}" onchange="liveUpdatePreview()"></div>
+                        </div>
+
+                        <div id="bc-ultra" style="display: none; flex-wrap: wrap; justify-content: space-between;">
+                            <div class="color-group"><label data-i18n="profile.bg1">{{ t('profile.bg1') }}</label><input type="color" name="u_bg1" id="i_u_bg1" value="{{ nav_banner_config.get('u_bg1', '#ff0000') }}" onchange="liveUpdatePreview()"></div>
+                            <div class="color-group"><label data-i18n="profile.bg2">{{ t('profile.bg2') }}</label><input type="color" name="u_bg2" id="i_u_bg2" value="{{ nav_banner_config.get('u_bg2', '#000000') }}" onchange="liveUpdatePreview()"></div>
+                            <div class="color-group"><label data-i18n="profile.bg3">{{ t('profile.bg3') }}</label><input type="color" name="u_bg3" id="i_u_bg3" value="{{ nav_banner_config.get('u_bg3', '#0000ff') }}" onchange="liveUpdatePreview()"></div>
+                            <div class="color-group"><label data-i18n="profile.textGlow">{{ t('profile.textGlow') }}</label><input type="color" name="u_txt" id="i_u_txt" value="{{ nav_banner_config.get('u_txt', '#00ffff') }}" onchange="liveUpdatePreview()"></div>
+                        </div>
+
+                        <div id="bc-giga" style="display: none; flex-wrap: wrap; justify-content: space-between;">
+                            <div class="color-group" style="width:31%"><label data-i18n="profile.bgShort1">{{ t('profile.bgShort1') }}</label><input type="color" name="g_bg1" id="i_g_bg1" value="{{ nav_banner_config.get('g_bg1', '#ff0000') }}" onchange="liveUpdatePreview()"></div>
+                            <div class="color-group" style="width:31%"><label data-i18n="profile.bgShort2">{{ t('profile.bgShort2') }}</label><input type="color" name="g_bg2" id="i_g_bg2" value="{{ nav_banner_config.get('g_bg2', '#ffff00') }}" onchange="liveUpdatePreview()"></div>
+                            <div class="color-group" style="width:31%"><label data-i18n="profile.bgShort3">{{ t('profile.bgShort3') }}</label><input type="color" name="g_bg3" id="i_g_bg3" value="{{ nav_banner_config.get('g_bg3', '#00ff00') }}" onchange="liveUpdatePreview()"></div>
+                            <div class="color-group" style="width:48%"><label data-i18n="profile.bgShort4">{{ t('profile.bgShort4') }}</label><input type="color" name="g_bg4" id="i_g_bg4" value="{{ nav_banner_config.get('g_bg4', '#00ffff') }}" onchange="liveUpdatePreview()"></div>
+                            <div class="color-group" style="width:48%"><label data-i18n="profile.bgShort5">{{ t('profile.bgShort5') }}</label><input type="color" name="g_bg5" id="i_g_bg5" value="{{ nav_banner_config.get('g_bg5', '#0000ff') }}" onchange="liveUpdatePreview()"></div>
+                            <div class="color-group"><label data-i18n="profile.textGlow1">{{ t('profile.textGlow1') }}</label><input type="color" name="g_txt1" id="i_g_txt1" value="{{ nav_banner_config.get('g_txt1', '#ffffff') }}" onchange="liveUpdatePreview()"></div>
+                            <div class="color-group"><label data-i18n="profile.textGlow2">{{ t('profile.textGlow2') }}</label><input type="color" name="g_txt2" id="i_g_txt2" value="{{ nav_banner_config.get('g_txt2', '#aaaaaa') }}" onchange="liveUpdatePreview()"></div>
+                        </div>
+
+                    </div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 3px; font-weight: bold; font-size: 0.8em; opacity: 0.7;" data-i18n="profile.discordName">{{ t('profile.discordName') }}</label>
+                        <input type="text" name="discord_name" value="{{ session.get('discord_name', '') }}" data-i18n-placeholder="profile.discordPlaceholder" placeholder="{{ t('profile.discordPlaceholder') }}" style="width: 100%; margin: 0; padding: 8px; font-size: 0.9em; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 3px; font-weight: bold; font-size: 0.8em; opacity: 0.7;" data-i18n="profile.steamId">{{ t('profile.steamId') }}</label>
+                        <input type="text" name="steam_id" value="{{ session.get('steam_id', '') }}" data-i18n-placeholder="profile.steamPlaceholder" placeholder="{{ t('profile.steamPlaceholder') }}" style="width: 100%; margin: 0; padding: 8px; font-size: 0.9em; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
+                        <div style="margin-top: 2px; font-size: 0.75em; text-align: right;"><a href="https://steamid.io/" target="_blank" style="color: var(--accent); text-decoration: none;" data-i18n="profile.findSteam">{{ t('profile.findSteam') }}</a></div>
+                    </div>
+
+                    <input type="hidden" name="theme" value="{{ theme }}">
+                    
+                    <button type="submit" id="edit-profile-save" style="width: 100%; margin-top: 5px; padding: 10px; font-size: 1em; border-radius: 6px;" data-i18n="common.saveEquip">{{ t('common.saveEquip') }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="credits-modal" class="modal-overlay">
+        <div class="box" style="position: relative; width: 90%; max-width: 400px; margin: 0; text-align: center;">
+            <span class="modal-close" id="close-credits-modal">&times;</span>
+            <h2 style="margin-top: 0;">🎬 <span data-i18n="credits.title">{{ t('credits.title') }}</span></h2>
+            <ul style="list-style: none; padding: 0; text-align: left; margin-top: 20px;">
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <strong style="color: var(--accent);">🛠️ <span data-i18n="credits.mainDev">{{ t('credits.mainDev') }}</span></strong><br>
+                    <span>{{ site_author }}{% if site_co_author %} &amp; {{ site_co_author }}{% endif %}</span>
+                </li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <strong style="color: var(--accent);">💻 <span data-i18n="credits.webCode">{{ t('credits.webCode') }}</span></strong><br>
+                    <span data-i18n="credits.writtenBy">{{ t('credits.writtenBy') }}</span> {{ site_author }}
+                </li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <strong style="color: var(--accent);">🎨 <span data-i18n="credits.uiux">{{ t('credits.uiux') }}</span></strong><br>
+                    <span data-i18n="credits.madeBy">{{ t('credits.madeBy') }}</span> {{ site_author }}
+                </li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <strong style="color: var(--accent);">🖥️ <span data-i18n="credits.hosting">{{ t('credits.hosting') }}</span></strong><br>
+                    <span data-i18n="credits.hostedBy">{{ t('credits.hostedBy') }}</span> {{ site_host }}
+                </li>
+                <li style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <strong style="color: var(--accent);">🎮 <span data-i18n="credits.org">{{ t('credits.org') }}</span></strong><br>
+                    <span data-i18n="credits.orgName">{{ t('credits.orgName') }}</span>
+                </li>
+                <li style="padding: 10px 0;">
+                    <strong style="color: var(--accent);">🖥️ <span data-i18n="credits.langs">{{ t('credits.langs') }}</span></strong><br>
+                    <span data-i18n="credits.langsList">{{ t('credits.langsList') }}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js" async></script>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div id="flash-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+            <div class="box" style="position: relative; max-width: 400px; width: 90%; text-align: center; margin: 0; border: 2px solid var(--accent); box-shadow: 0 0 20px var(--accent);">
+                <h3 style="margin-top: 0; color: var(--accent);"><span data-i18n="flash.title">{{ t('flash.title') }}</span> 🔔</h3>
+                {% for category, message in messages %}
+                    <p style="font-size: 1.1em; color: var(--text-main); margin: 15px 0;">{{ message }}</p>
+                    
+                    {% if category == 'success' %}
+                    <script>
+                        setTimeout(() => {
+                            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 999999 });
+                        }, 200);
+                    </script>
+                    {% endif %}
+                    
+                {% endfor %}
+                <button onclick="document.getElementById('flash-modal').style.display='none'" style="width: 100%; margin-top: 10px;" data-i18n="flash.ok">{{ t('flash.ok') }}</button>
+            </div>
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div id="ore-dialog-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ore-dialog-title" aria-describedby="ore-dialog-message">
+        <div class="box ore-dialog-box">
+            <h3 id="ore-dialog-title"><span data-i18n="flash.title">{{ t('flash.title') }}</span></h3>
+            <p id="ore-dialog-message" class="ore-dialog-message"></p>
+            <div id="ore-dialog-prompt-wrap" style="display: none;">
+                <input id="ore-dialog-input" type="text" autocomplete="off">
+            </div>
+            <div class="ore-dialog-actions">
+                <button type="button" id="ore-dialog-cancel" class="ore-dialog-cancel" data-i18n="common.cancel">{{ t('common.cancel') }}</button>
+                <button type="button" id="ore-dialog-ok" data-i18n="common.ok">{{ t('common.ok') }}</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <div class="footer-right">
+        <img class="footer-alex" src="{{ url_for('static', filename='img/alex.png') }}" alt="ALEX" width="90" height="86">
+        <div class="footer-credit">
+            <span data-i18n="footer.madeBy">{{ t('footer.madeBy') }}</span> {{ site_author }}<br>
+            <span style="font-size: 0.75em; opacity: 0.8;" data-i18n="footer.version">{{ t('footer.version') }}</span>
+        </div>
+    </div>
+
+    <div id="python-bg" aria-hidden="true">
+        <div class="ot-bg-art" id="ot-bg-art"{% if bg_game_art %} style="background-image:url('{{ bg_game_art }}')"{% endif %}></div>
+        <div class="ot-bg-wash"></div>
+        <div class="ot-bg-grid"></div>
+        <div class="ot-bg-scan"></div>
+        <canvas id="ot-bg-ore"></canvas>
+    </div>
+
+    <script>
+        const hamburgerBtn = document.getElementById('hamburger-btn');
+        const sidebarEl = document.getElementById('app-sidebar');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+        const sidebarPinBtn = document.getElementById('sidebar-pin');
+        const sidebarPinLabel = document.getElementById('sidebar-pin-label');
+        const desktopSidebarMq = window.matchMedia('(min-width: 981px)');
+        const SIDEBAR_PIN_KEY = 'ot_sidebar_pinned';
+        let sidebarCollapseTimer = null;
+
+        function isDesktopSidebar() {
+            return desktopSidebarMq.matches;
+        }
+        function isSidebarPinned() {
+            return document.body.classList.contains('sidebar-pinned');
+        }
+        function syncSidebarPinUi() {
+            const on = isSidebarPinned();
+            if (sidebarPinBtn) {
+                sidebarPinBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+                sidebarPinBtn.title = on ? 'Unpin sidebar' : 'Pin sidebar';
+            }
+            if (sidebarPinLabel) sidebarPinLabel.textContent = on ? 'Unpin' : 'Pin';
+        }
+        function setSidebarPinned(on) {
+            document.body.classList.toggle('sidebar-pinned', !!on);
+            try { localStorage.setItem(SIDEBAR_PIN_KEY, on ? '1' : '0'); } catch (e) {}
+            if (on) {
+                clearTimeout(sidebarCollapseTimer);
+                document.body.classList.add('sidebar-expanded');
+            }
+            syncSidebarPinUi();
+        }
+        function expandDesktopSidebar() {
+            if (!isDesktopSidebar()) return;
+            clearTimeout(sidebarCollapseTimer);
+            document.body.classList.add('sidebar-expanded');
+        }
+        function scheduleCollapseDesktopSidebar() {
+            if (!isDesktopSidebar() || isSidebarPinned()) return;
+            clearTimeout(sidebarCollapseTimer);
+            sidebarCollapseTimer = setTimeout(() => {
+                if (isSidebarPinned()) return;
+                document.body.classList.remove('sidebar-expanded');
+            }, 180);
+        }
+        try {
+            if (localStorage.getItem(SIDEBAR_PIN_KEY) === '1') setSidebarPinned(true);
+            else syncSidebarPinUi();
+        } catch (e) { syncSidebarPinUi(); }
+        if (sidebarEl) {
+            sidebarEl.addEventListener('mouseenter', expandDesktopSidebar);
+            sidebarEl.addEventListener('mouseleave', scheduleCollapseDesktopSidebar);
+            sidebarEl.addEventListener('focusin', expandDesktopSidebar);
+            sidebarEl.addEventListener('focusout', (e) => {
+                if (!sidebarEl.contains(e.relatedTarget)) scheduleCollapseDesktopSidebar();
+            });
+        }
+        if (sidebarPinBtn) {
+            sidebarPinBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!isDesktopSidebar()) return;
+                setSidebarPinned(!isSidebarPinned());
+            });
+        }
+        if (typeof desktopSidebarMq.addEventListener === 'function') {
+            desktopSidebarMq.addEventListener('change', () => {
+                clearTimeout(sidebarCollapseTimer);
+                if (!isSidebarPinned()) document.body.classList.remove('sidebar-expanded');
+                if (isDesktopSidebar()) document.body.classList.remove('sidebar-open');
+            });
+        }
+        if (hamburgerBtn) {
+            hamburgerBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.body.classList.toggle('sidebar-open');
+            });
+        }
+        if (sidebarBackdrop) {
+            sidebarBackdrop.addEventListener('click', () => document.body.classList.remove('sidebar-open'));
+        }
+
+        const avatarBtn = document.getElementById('avatar-btn');
+        const avatarWrap = document.getElementById('nav-avatar-wrap');
+        const dropdown = document.getElementById('profile-dropdown');
+        const steamBtn = document.getElementById('open-steam-modal');
+        const steamModal = document.getElementById('steam-modal');
+        const closeSteamModal = document.getElementById('close-steam-modal');
+        const creditsBtn = document.getElementById('open-credits-modal');
+        const creditsModal = document.getElementById('credits-modal');
+        const closeCreditsModal = document.getElementById('close-credits-modal');
+
+        if(avatarBtn) {
+            const avatarToggle = avatarWrap || avatarBtn;
+            avatarToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            });
+        }
+
+        window.addEventListener('click', (e) => {
+            const avatarHit = avatarWrap || avatarBtn;
+            if (dropdown && !dropdown.contains(e.target) && e.target !== avatarBtn && !(avatarHit && avatarHit.contains(e.target))) dropdown.style.display = 'none';
+            if (sidebarEl && !sidebarEl.contains(e.target) && e.target !== hamburgerBtn) document.body.classList.remove('sidebar-open');
+            
+            if (e.target === steamModal) {
+                steamModal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            if (e.target === creditsModal) {
+                creditsModal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        });
+
+        if(closeSteamModal) closeSteamModal.addEventListener('click', () => {
+            steamModal.style.display = 'none';
+            document.body.style.overflow = '';
+        });
+        
+        if(creditsBtn) creditsBtn.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            dropdown.style.display = 'none'; 
+            document.body.style.overflow = 'hidden';
+            creditsModal.style.display = 'flex'; 
+        });
+        
+        if(closeCreditsModal) closeCreditsModal.addEventListener('click', () => {
+            creditsModal.style.display = 'none';
+            document.body.style.overflow = '';
+        });
+
+        const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const oreCanvas = document.getElementById('ot-bg-ore');
+        if (oreCanvas && !reduceMotion) {
+            const ctx = oreCanvas.getContext('2d');
+            const motes = [];
+            function accentRgb() {
+                const raw = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#bb86fc';
+                const hex = raw.replace('#', '');
+                if (hex.length === 6) {
+                    return [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
+                }
+                return [187, 134, 252];
+            }
+            function resizeOre() {
+                oreCanvas.width = window.innerWidth;
+                oreCanvas.height = window.innerHeight;
+            }
+            function seedMotes() {
+                const n = Math.min(28, Math.floor((oreCanvas.width * oreCanvas.height) / 42000));
+                motes.length = 0;
+                for (let i = 0; i < n; i++) {
+                    motes.push({
+                        x: Math.random() * oreCanvas.width,
+                        y: Math.random() * oreCanvas.height,
+                        r: Math.random() * 1.8 + 0.4,
+                        s: Math.random() * 0.35 + 0.08,
+                        a: Math.random() * 0.45 + 0.12,
+                        gold: Math.random() < 0.28
+                    });
+                }
+            }
+            function tickOre() {
+                if (document.hidden) {
+                    requestAnimationFrame(tickOre);
+                    return;
+                }
+                const [ar, ag, ab] = accentRgb();
+                ctx.clearRect(0, 0, oreCanvas.width, oreCanvas.height);
+                motes.forEach(function (p) {
+                    p.y -= p.s;
+                    p.x += Math.sin(p.y * 0.01) * 0.15;
+                    if (p.y < -8) { p.y = oreCanvas.height + 8; p.x = Math.random() * oreCanvas.width; }
+                    ctx.beginPath();
+                    ctx.fillStyle = p.gold
+                        ? ('rgba(255,215,0,' + p.a + ')')
+                        : ('rgba(' + ar + ',' + ag + ',' + ab + ',' + p.a + ')');
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                requestAnimationFrame(tickOre);
+            }
+            resizeOre();
+            seedMotes();
+            window.addEventListener('resize', function () { resizeOre(); seedMotes(); });
+            requestAnimationFrame(tickOre);
+        }
+    </script>
+
+<div id="playerCardOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999999; justify-content: center; align-items: center; backdrop-filter: blur(8px);">
+    <div id="playerCard" class="box" style="background: var(--bg-box); border: 2px solid var(--accent); width: 350px; border-radius: 16px; overflow: hidden; position: relative; transform: scale(0.9); transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        
+        <div id="pc-banner" class="banner-container" style="height: 120px; background: #1a1a1a;"></div>
+        
+        <button onclick="closePlayerCard()" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; font-size: 1.2em; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; z-index: 20;">✖</button>
+        
+        <div style="margin: -55px auto 10px auto; display: flex; justify-content: center; align-items: center; position: relative; z-index: 2;">
+            <div id="pc-avatar-wrapper" style="border-radius: 50% !important;">
+                <img id="pc-avatar" src="" style="width: 110px; height: 110px; border-radius: 50% !important; object-fit: cover; display: block; background: #111; border: 6px solid var(--bg-box);">
+            </div>
+        </div>
+        
+        <div id="pc-card-body" style="padding: 0 20px 20px 20px; text-align: center;">
+            <h2 id="pc-username" style="margin: 0 0 5px 0; color: white; font-size: 1.8em; font-weight: 800;">Username</h2>
+            
+            <div id="pc-custom-title-display" style="display: none; color: #ff4c4c; font-weight: bold; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;"></div>
+            <div id="pc-season-badge" class="pc-season-badge">S1 L1</div>
+            
+            <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; flex-wrap: wrap;">
+                <div id="pc-discord-badge" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(88, 101, 242, 0.15); border: 1px solid #5865F2; color: #5865F2; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; transition: 0.3s;">
+                    <div id="pc-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #747f8d;"></div>
+                    <svg width="14" height="14" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1,105.25,105.25,0,0,0,32.19-16.14c2.64-27.38-4.51-51.11-19.32-72.15ZM42.49,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.49,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.2,46,96.09,53,91.08,65.69,84.73,65.69Z"/></svg>
+                    <span id="pc-discord">Discord</span>
+                </div>
+                
+                <div id="pc-steam-badge" style="display: none; align-items: center; gap: 6px; background: rgba(102, 192, 244, 0.15); border: 1px solid #66c0f4; color: #66c0f4; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold;">
+                    <span>🎮</span> <span id="pc-steam-name">Steam</span>
+                </div>
+            </div>
+            
+            <div id="pc-activity-box" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; margin-bottom: 16px; font-size: 0.85em;">
+                <span style="opacity: 0.7; font-weight: bold;" data-i18n="profile.playing">{{ t('profile.playing') }}</span> <strong id="pc-activity-name" style="color: white;">None</strong>
+            </div>
+
+            <div id="pc-recent" class="pc-recent">
+                <div style="opacity: 0.7; font-weight: 800; font-size: 0.75em; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px;" data-i18n="profile.last2weeks">{{ t('profile.last2weeks') }}</div>
+                <div id="pc-recent-list"></div>
+            </div>
+
+            <div id="pc-xp-wrap" class="pc-xp-wrap">
+                <div class="pc-xp-meta">
+                    <span id="pc-xp-label">Saturday Protocol</span>
+                    <span id="pc-xp-nums">0 / 10</span>
+                </div>
+                <div class="pc-xp-bar"><div id="pc-xp-fill" class="pc-xp-fill"></div></div>
+            </div>
+            
+            <div id="pc-stats" style="display: grid; grid-template-columns: 1fr 1fr 1fr; margin: 0 0 25px 0; padding: 15px 0; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <div style="border-right: 1px solid rgba(255,255,255,0.08);">
+                    <span style="display: block; font-size: 1.6em; font-weight: 900; color: var(--accent);" id="pc-votes">0</span>
+                    <span style="opacity: 0.6; font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;" data-i18n="profile.totalVotes">{{ t('profile.totalVotes') }}</span>
+                </div>
+                <div style="border-right: 1px solid rgba(255,255,255,0.08); overflow: hidden;">
+                    <span style="display: block; font-size: 1.1em; font-weight: bold; color: white; margin-top: 5px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; padding: 0 5px;" id="pc-favgame">None</span>
+                    <span style="opacity: 0.6; font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-top: 5px; display: block;" data-i18n="profile.topGame">{{ t('profile.topGame') }}</span>
+                </div>
+                <div>
+                    <span style="display: block; font-size: 1.6em; font-weight: 900; color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.4);" id="pc-coins">0</span>
+                    <span style="opacity: 0.6; font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;" data-i18n="pass.orecoins">{{ t('pass.orecoins') }}</span>
+                </div>
+            </div>
+
+            <div id="pc-founder-label" class="pc-founder-label">Founder</div>
+
+            <a id="pc-steam-btn" href="#" target="_blank" style="display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; background: #171a21; color: white; padding: 12px 0; border-radius: 8px; font-weight: bold; text-decoration: none; border: 1px solid rgba(102, 192, 244, 0.5); transition: 0.2s;">
+                <span data-i18n="profile.viewSteam">{{ t('profile.viewSteam') }}</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+window.OT_BORDER_WRAP = {{ border_wrap_keys|default([])|tojson }};
+window.OT_BORDER_IMG = {{ border_img_keys|default([])|tojson }};
+window.OT_BANNER_STYLES = {{ banner_style_map|default({})|tojson }};
+window.OT_BANNER_EQUIPPED_TEXT = {{ banner_equipped_text|default('OreTime')|tojson }};
+
+function sanitizeHex(v, fallback) {
+    return /^#[0-9A-Fa-f]{6}$/.test(v) ? v : fallback;
+}
+
+function applyAvatarBorderTo(wrapper, img, activeBorder, defaultBorder) {
+    if (!img) return;
+    const wrap = wrapper || img.parentElement;
+    const wrapKeys = window.OT_BORDER_WRAP || [];
+    const imgKeys = window.OT_BORDER_IMG || [];
+    const wrapClasses = wrapKeys.map(k => 'border-' + k + '-wrapper');
+    const imgClasses = imgKeys.map(k => 'border-' + k);
+    if (wrap) wrapClasses.forEach(c => wrap.classList.remove(c));
+    imgClasses.forEach(c => img.classList.remove(c));
+    if (defaultBorder) img.style.border = defaultBorder;
+
+    const b = activeBorder || '';
+    if (imgKeys.indexOf(b) >= 0) {
+        img.classList.add('border-' + b);
+    } else if (wrapKeys.indexOf(b) >= 0) {
+        if (wrap) wrap.classList.add('border-' + b + '-wrapper');
+        img.style.border = 'none';
+    }
+}
+
+function applyAvatarBorder(wrapperId, imgId, activeBorder, defaultBorder) {
+    applyAvatarBorderTo(document.getElementById(wrapperId), document.getElementById(imgId), activeBorder, defaultBorder);
+}
+
+function bannerConfigString(config) {
+    if (config == null || config === undefined) return '{}';
+    if (typeof config === 'string') return config;
+    try { return JSON.stringify(config); } catch (e) { return '{}'; }
+}
+
+function lookSignature(data) {
+    if (!data) return '';
+    return [
+        data.active_border || '',
+        data.active_banner || '',
+        bannerConfigString(data.banner_config),
+        data.custom_title || '',
+        data.avatar || '',
+        data.owns_title ? '1' : '0'
+    ].join('\x1f');
+}
+
+var _otLookCache = {};
+var _otLooksChannel = null;
+try {
+    if (typeof BroadcastChannel === 'function') _otLooksChannel = new BroadcastChannel('ot-profile-looks');
+} catch (e) { _otLooksChannel = null; }
+
+function broadcastProfileLook(data) {
+    if (!data || !data.username) return;
+    try {
+        var payload = JSON.stringify(data);
+        localStorage.setItem('ot_profile_look', payload);
+        if (_otLooksChannel) _otLooksChannel.postMessage(data);
+    } catch (e) {}
+}
+
+function applyLiveProfileUpdate(data, opts) {
+    if (!data) return;
+    opts = opts || {};
+    const username = data.username || '';
+    const steamId = String(data.steam_id || '');
+    if (!username && !steamId) return;
+    const cacheKey = (username || '') + '|' + steamId;
+    const sig = lookSignature(data);
+    if (!opts.force && _otLookCache[cacheKey] === sig) return;
+    _otLookCache[cacheKey] = sig;
+
+    const border = data.active_border != null ? data.active_border : data.border;
+    const banner = data.active_banner;
+    const config = bannerConfigString(data.banner_config);
+    const matches = (el) => {
+        const n = el.getAttribute('data-player-username') || '';
+        const s = el.getAttribute('data-steam') || el.getAttribute('data-player-steam') || '';
+        return (username && n === username) || (steamId && s && s === steamId);
+    };
+
+    document.querySelectorAll('.player-card[data-player-username], .player-card[data-player-steam]').forEach(el => {
+        if (el.id === 'playerCard' || !matches(el)) return;
+        const img = el.tagName === 'IMG' ? el : (el.querySelector('img') || null);
+        if (!img) return;
+        applyAvatarBorderTo(el, img, border, el.getAttribute('data-default-border') || '');
+        el.setAttribute('data-active-border', border || '');
+        if (banner !== undefined) el.setAttribute('data-active-banner', banner || 'default');
+        if (data.avatar) img.src = data.avatar;
+        const card = el.closest('.member-card');
+        if (card && banner !== undefined) {
+            const bannerEl = card.querySelector('.member-banner');
+            const word = card.querySelector('.member-wordmark');
+            if (bannerEl) {
+                renderBannerTo(bannerEl, banner, config, '#1a1a1a');
+                if (word) {
+                    word.innerHTML = bannerEl.innerHTML;
+                    bannerEl.innerHTML = '';
+                }
+            }
+        }
+    });
+
+    const overlay = document.getElementById('playerCardOverlay');
+    const pcName = document.getElementById('pc-username');
+    const popupOpen = overlay && overlay.style.display && overlay.style.display !== 'none';
+    if (popupOpen && pcName && username && pcName.innerText === username) {
+        if (border !== undefined) applyAvatarBorder('pc-avatar-wrapper', 'pc-avatar', border, '6px solid var(--bg-box)');
+        if (banner !== undefined) renderBanner('pc-banner', banner, config, '#1a1a1a');
+        if (data.avatar) {
+            const pcAv = document.getElementById('pc-avatar');
+            if (pcAv) pcAv.src = data.avatar;
+        }
+        if (data.custom_title !== undefined) {
+            const titleDisplay = document.getElementById('pc-custom-title-display');
+            if (titleDisplay) {
+                if (data.custom_title) {
+                    titleDisplay.innerText = data.custom_title;
+                    titleDisplay.style.display = 'block';
+                } else {
+                    titleDisplay.style.display = 'none';
+                }
+            }
+        }
+    }
+
+    if (!opts.fromPoll && !opts.fromBroadcast) broadcastProfileLook(data);
+}
+
+function bannerWordmark(activeBanner, shopMode) {
+    return window.OT_BANNER_EQUIPPED_TEXT || 'OreTime';
+}
+
+function renderBannerTo(el, activeBanner, configStr, defaultBannerColor, shopMode) {
+    if (!el) return;
+    const keep = [];
+    if (el.classList.contains('member-banner')) keep.push('member-banner');
+    el.className = ['banner-container'].concat(keep).join(' ');
+    el.style.background = '';
+    el.style.backgroundImage = '';
+    el.style.backgroundColor = '';
+    el.style.backgroundSize = '';
+    el.style.backgroundPosition = '';
+    el.style.removeProperty('--giga-flow');
+    el.innerHTML = '';
+
+    let c = {};
+    try { c = JSON.parse(configStr || '{}'); } catch(e){}
+    const mark = bannerWordmark(activeBanner, shopMode);
+
+    if (activeBanner === 'standard') {
+        el.style.background = sanitizeHex(c.bg_color, '#1a1a1a');
+        el.innerHTML = `<span class="banner-text-base banner-standard-text">${mark}</span>`;
+    } else if (activeBanner === 'pro') {
+        const glow = sanitizeHex(c.text_glow, '#ff0000');
+        el.style.background = '#000000';
+        el.innerHTML = `<span class="banner-text-base banner-pro-text" style="color: ${glow}; filter: drop-shadow(0 0 8px ${glow});">${mark}</span>`;
+    } else if (activeBanner === 'ultra') {
+        const u1 = sanitizeHex(c.u_bg1, '#ff0000');
+        const u2 = sanitizeHex(c.u_bg2, '#000000');
+        const u3 = sanitizeHex(c.u_bg3, '#0000ff');
+        const ut = sanitizeHex(c.u_txt, '#00ffff');
+        el.style.background = `linear-gradient(90deg, ${u1} 0%, ${u1} 15%, ${u2} 50%, ${u3} 85%, ${u3} 100%)`;
+        el.innerHTML = `<span class="banner-text-base banner-ultra-text" style="color: ${ut}; filter: drop-shadow(0 0 10px ${ut});">${mark}</span>`;
+    } else if (activeBanner === 'giga_banner') {
+        const g1 = sanitizeHex(c.g_bg1, '#ff0000');
+        const g2 = sanitizeHex(c.g_bg2, '#ffff00');
+        const g3 = sanitizeHex(c.g_bg3, '#00ff00');
+        const g4 = sanitizeHex(c.g_bg4, '#00ffff');
+        const g5 = sanitizeHex(c.g_bg5, '#0000ff');
+        const t1 = sanitizeHex(c.g_txt1, '#ffffff');
+        const t2 = sanitizeHex(c.g_txt2, '#aaaaaa');
+        el.classList.add('giga-banner-bg');
+        el.style.setProperty('--giga-flow', `linear-gradient(90deg, ${g1}, ${g2}, ${g3}, ${g4}, ${g5}, ${g1})`);
+        el.innerHTML = `<span class="banner-text-base banner-giga-text" style="background-image: linear-gradient(90deg, ${t1}, ${t2}, ${t1}, ${t2}, ${t1});">${mark}</span>`;
+    } else if (activeBanner === 'voidglitch') {
+        el.classList.add('voidglitch-banner');
+        el.innerHTML = `<span class="banner-text-base banner-void-text">${mark}</span>`;
+    } else {
+        const styles = window.OT_BANNER_STYLES || {};
+        const spec = styles[activeBanner];
+        if (spec && spec.class) {
+            el.classList.add(spec.class);
+            const textCls = spec.text_class || '';
+            el.innerHTML = `<span class="banner-text-base ${textCls}">${mark}</span>`;
+        } else {
+            el.style.background = defaultBannerColor || '#1a1a1a';
+            el.innerHTML = `<span class="banner-text-base banner-standard-text">${mark}</span>`;
+        }
+    }
+}
+
+function renderBanner(elementId, activeBanner, configStr, defaultBannerColor, shopMode) {
+    renderBannerTo(document.getElementById(elementId), activeBanner, configStr, defaultBannerColor, shopMode);
+}
+
+function fillPlayerCard(data) {
+    if (!data || data.error) return;
+    const card = document.getElementById('playerCard');
+    const founderLabel = document.getElementById('pc-founder-label');
+    try {
+        document.getElementById('pc-username').innerText = data.username;
+        document.getElementById('pc-avatar').src = data.avatar;
+        document.getElementById('pc-discord').innerText = data.discord_name;
+        document.getElementById('pc-votes').innerText = data.votes;
+        document.getElementById('pc-favgame').innerText = data.fav_game;
+        document.getElementById('pc-coins').innerText = data.ore_coins || 0;
+
+        renderBanner('pc-banner', data.active_banner, data.banner_config, data.banner);
+        applyAvatarBorder('pc-avatar-wrapper', 'pc-avatar', data.active_border, '6px solid var(--bg-box)');
+
+        const titleDisplay = document.getElementById('pc-custom-title-display');
+        if(data.owns_title && data.custom_title) {
+            titleDisplay.innerText = data.custom_title;
+            titleDisplay.style.display = 'block';
+        } else {
+            titleDisplay.style.display = 'none';
+        }
+
+        const statusDot = document.getElementById('pc-status-dot');
+        const discordBadge = document.getElementById('pc-discord-badge');
+        if (data.discord_status === 'online') {
+            statusDot.style.background = '#43b581';
+            statusDot.style.boxShadow = '0 0 8px #43b581';
+            discordBadge.style.borderColor = '#43b581';
+            discordBadge.style.color = '#43b581';
+        } else {
+            statusDot.style.background = '#747f8d';
+            statusDot.style.boxShadow = 'none';
+            discordBadge.style.borderColor = '#5865F2';
+            discordBadge.style.color = '#5865F2';
+        }
+
+        const activityBox = document.getElementById('pc-activity-box');
+        if (data.discord_activity && data.discord_activity.trim() !== "") {
+            activityBox.style.display = 'block';
+            document.getElementById('pc-activity-name').innerText = data.discord_activity;
+        } else {
+            activityBox.style.display = 'none';
+        }
+
+        if(data.steam_name) {
+            document.getElementById('pc-steam-badge').style.display = 'inline-flex';
+            document.getElementById('pc-steam-name').innerText = data.steam_name;
+            document.getElementById('pc-steam-btn').href = `https://steamcommunity.com/profiles/${data.steam_id}`;
+            document.getElementById('pc-steam-btn').style.display = 'flex';
+        } else if (data.steam_name === '') {
+            document.getElementById('pc-steam-badge').style.display = 'none';
+            document.getElementById('pc-steam-btn').style.display = 'none';
+        }
+
+        const seasonBadge = document.getElementById('pc-season-badge');
+        const xpWrap = document.getElementById('pc-xp-wrap');
+        if (data.season) {
+            seasonBadge.style.display = 'inline-block';
+            seasonBadge.innerText = data.season_badge || ('S1 L' + data.season.level);
+            xpWrap.style.display = 'block';
+            document.getElementById('pc-xp-label').innerText = data.season.maxed ? otT('profile.protocolMax') : otT('profile.levelShort', { n: data.season.level });
+            document.getElementById('pc-xp-nums').innerText = data.season.maxed ? otT('common.max') : (data.season.xp_into_level + ' / ' + data.season.xp_for_level + ' XP');
+            document.getElementById('pc-xp-fill').style.width = (data.season.percent || 0) + '%';
+        } else {
+            seasonBadge.style.display = 'none';
+            xpWrap.style.display = 'none';
+        }
+
+        const recentBox = document.getElementById('pc-recent');
+        const recentList = document.getElementById('pc-recent-list');
+        if (data.recent_games && data.recent_games.length) {
+            recentBox.style.display = 'block';
+            recentList.innerHTML = data.recent_games.map(g =>
+                '<div style="display:flex;justify-content:space-between;gap:8px;margin-top:3px;"><span>' + (g.name || otT('common.unknown')) + '</span><strong>' + (g.hours_2w || '0m') + '</strong></div>'
+            ).join('');
+        } else if (data.recent_games) {
+            recentBox.style.display = 'none';
+            recentList.innerHTML = '';
+        }
+
+        const isFounder = !!data.is_founder;
+        if (founderLabel) founderLabel.style.display = isFounder ? 'block' : 'none';
+        if (card) card.classList.toggle('has-founder', isFounder);
+    } catch (e) {}
+}
+
+function openPlayerCard(username) {
+    const overlay = document.getElementById('playerCardOverlay');
+    const card = document.getElementById('playerCard');
+    if (!overlay || !card || !username) return;
+
+    document.body.style.overflow = 'hidden';
+    const founderLabel = document.getElementById('pc-founder-label');
+    if (founderLabel) founderLabel.style.display = 'none';
+    card.classList.remove('has-founder');
+
+    const url = '/api/player/' + encodeURIComponent(username);
+    fetch(url + '?lite=1', { credentials: 'same-origin' })
+        .then(response => {
+            if (!response.ok) throw new Error('Could not load player');
+            return response.json();
+        })
+        .then(data => {
+            if(data.error) throw new Error(data.error);
+            fillPlayerCard(data);
+            overlay.style.display = 'flex';
+            setTimeout(() => card.style.transform = 'scale(1)', 10);
+            fetch(url + '?steam=1', { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (extra) { if (extra && !extra.error) fillPlayerCard(extra); })
+                .catch(function () {});
+        })
+        .catch(() => {
+            document.body.style.overflow = '';
+        });
+}
+
+function closePlayerCard() {
+    const overlay = document.getElementById('playerCardOverlay');
+    const card = document.getElementById('playerCard');
+    if (!overlay || !card) return;
+    card.style.transform = 'scale(0.9)';
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        document.body.style.overflow = ''; 
+    }, 200);
+}
+
+function otT(key, vars) {
+    if (window.OTI18n && typeof window.OTI18n.t === 'function') return window.OTI18n.t(key, vars);
+    return key;
+}
+
+(function () {
+    var overlay, msgEl, titleEl, inputEl, okBtn, cancelBtn, promptWrap;
+    var queue = [];
+    var busy = false;
+    var current = null;
+    var lastFocus = null;
+
+    function dlgLabel(key, fallback) {
+        var v = (typeof otT === 'function') ? otT(key) : '';
+        if (!v || v === key) return fallback;
+        return v;
+    }
+
+    function bind() {
+        overlay = document.getElementById('ore-dialog-overlay');
+        msgEl = document.getElementById('ore-dialog-message');
+        titleEl = document.getElementById('ore-dialog-title');
+        inputEl = document.getElementById('ore-dialog-input');
+        okBtn = document.getElementById('ore-dialog-ok');
+        cancelBtn = document.getElementById('ore-dialog-cancel');
+        promptWrap = document.getElementById('ore-dialog-prompt-wrap');
+        if (!overlay || overlay.getAttribute('data-ore-bound') === '1') return !!overlay;
+        overlay.setAttribute('data-ore-bound', '1');
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) finish(current && current.type === 'alert');
+        });
+        okBtn.addEventListener('click', function () { finish(true); });
+        cancelBtn.addEventListener('click', function () { finish(false); });
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (!busy || overlay.style.display !== 'flex') return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                finish(current && current.type === 'alert');
+            }
+        });
+        return true;
+    }
+
+    function finish(ok) {
+        if (!busy || !current) return;
+        var job = current;
+        var value;
+        if (job.type === 'prompt') value = ok ? inputEl.value : null;
+        else if (job.type === 'confirm') value = !!ok;
+        else value = true;
+        overlay.style.display = 'none';
+        if (inputEl) inputEl.value = '';
+        busy = false;
+        current = null;
+        if (lastFocus && typeof lastFocus.focus === 'function') {
+            try { lastFocus.focus(); } catch (err) {}
+        }
+        lastFocus = null;
+        job.resolve(value);
+        pump();
+    }
+
+    function pump() {
+        if (busy || !queue.length) return;
+        if (!overlay && !bind()) {
+            var skipped = queue.shift();
+            if (skipped.type === 'confirm') skipped.resolve(false);
+            else if (skipped.type === 'prompt') skipped.resolve(null);
+            else skipped.resolve(true);
+            pump();
+            return;
+        }
+        busy = true;
+        current = queue.shift();
+        lastFocus = document.activeElement;
+        if (current.type === 'alert') {
+            titleEl.style.display = '';
+            titleEl.textContent = dlgLabel('flash.title', 'Notification');
+        } else {
+            titleEl.style.display = 'none';
+            titleEl.textContent = '';
+        }
+        msgEl.textContent = current.message || '';
+        promptWrap.style.display = current.type === 'prompt' ? 'block' : 'none';
+        inputEl.value = current.def || '';
+        cancelBtn.style.display = current.type === 'alert' ? 'none' : '';
+        okBtn.textContent = current.type === 'confirm' ? dlgLabel('common.yes', 'Yes') : dlgLabel('common.ok', 'OK');
+        cancelBtn.textContent = dlgLabel('common.cancel', 'CANCEL');
+        overlay.style.display = 'flex';
+        if (current.type === 'prompt') inputEl.focus();
+        else okBtn.focus();
+    }
+
+    function enqueue(job) {
+        return new Promise(function (resolve) {
+            job.resolve = resolve;
+            queue.push(job);
+            pump();
+        });
+    }
+
+    window.oreAlert = function (message) {
+        return enqueue({ type: 'alert', message: message == null ? '' : String(message) });
+    };
+    window.oreConfirm = function (message) {
+        return enqueue({ type: 'confirm', message: message == null ? '' : String(message) });
+    };
+    window.orePrompt = function (message, deflt) {
+        return enqueue({ type: 'prompt', message: message == null ? '' : String(message), def: deflt == null ? '' : String(deflt) });
+    };
+    window.oreConfirmSubmit = function (event, message) {
+        var form = event && event.target;
+        if (!form) return false;
+        if (form.getAttribute('data-ore-ok') === '1') return true;
+        event.preventDefault();
+        window.oreConfirm(message).then(function (ok) {
+            if (!ok) return;
+            form.setAttribute('data-ore-ok', '1');
+            HTMLFormElement.prototype.submit.call(form);
+        });
+        return false;
+    };
+    window.alert = function (message) { window.oreAlert(message); };
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+    else bind();
+})();
+
+function claimDailyOre(btn) {
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    const original = btn.innerText;
+    btn.innerText = otT('daily.claiming');
+    fetch('/api/daily/claim', { method: 'POST', credentials: 'same-origin' })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || !data.success) {
+                btn.disabled = false;
+                btn.innerText = original;
+                oreAlert(data.error || otT('daily.already'));
+                return;
+            }
+            btn.innerText = data.message || otT('daily.claimed');
+            document.querySelectorAll('.js-oc-balance').forEach(el => { el.innerText = data.new_balance; });
+            const bal = document.getElementById('user-balance-display');
+            if (bal && data.new_balance !== undefined) bal.innerText = data.new_balance;
+            const navDaily = document.getElementById('nav-daily-btn');
+            if (navDaily) {
+                navDaily.disabled = true;
+                navDaily.innerText = '✓ ' + (data.streak || 0) + '/7';
+            }
+            const homeDaily = document.getElementById('daily-ore-btn');
+            if (homeDaily && homeDaily !== btn) {
+                homeDaily.disabled = true;
+                homeDaily.innerText = otT('daily.claimedStreakLong', { n: data.streak || 0 });
+            }
+            const shopDaily = document.getElementById('shop-daily-btn');
+            if (shopDaily && shopDaily !== btn) {
+                shopDaily.disabled = true;
+                shopDaily.innerText = otT('daily.claimedStreak', { n: data.streak || 0 });
+                shopDaily.style.opacity = '0.55';
+                shopDaily.style.cursor = 'not-allowed';
+            }
+            if (typeof confetti === 'function') confetti({ particleCount: data.bonus ? 180 : 80, spread: 70, origin: { y: 0.7 }, zIndex: 999999 });
+            if (data.claimable && data.claimable.length) {
+                oreAlert(otT('daily.passReady', { items: data.claimable.map(u => u.label).join(', ') }));
+            } else if (data.unlocked && data.unlocked.length) {
+                oreAlert(otT('daily.protocolUnlocked', { items: data.unlocked.map(u => u.label).join(', ') }));
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerText = original;
+        });
+}
+
+(function () {
+    const overlay = document.getElementById('playerCardOverlay');
+    if (!overlay) return;
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) closePlayerCard();
+    });
+})();
+</script>
+
+<script>
+        function liveUpdatePreview() {
+            const borderSelect = document.getElementById('edit-border-select');
+            const bannerSelect = document.getElementById('edit-banner-select');
+            if (!borderSelect || !bannerSelect) return;
+            const selBorder = borderSelect.value;
+            applyAvatarBorder('edit-avatar-wrapper', 'edit-pc-avatar', selBorder, '4px solid var(--bg-box)');
+            
+            const selBanner = bannerSelect.value;
+            const hexVal = (id, fallback) => {
+                const el = document.getElementById(id);
+                return sanitizeHex(el ? el.value : fallback, fallback);
+            };
+            const cStr = JSON.stringify({
+                bg_color: hexVal('i_bg_color', '#1a1a1a'),
+                text_glow: hexVal('i_text_glow', '#ff0000'),
+                u_bg1: hexVal('i_u_bg1', '#ff0000'), u_bg2: hexVal('i_u_bg2', '#000000'), u_bg3: hexVal('i_u_bg3', '#0000ff'), u_txt: hexVal('i_u_txt', '#00ffff'),
+                g_bg1: hexVal('i_g_bg1', '#ff0000'), g_bg2: hexVal('i_g_bg2', '#ffff00'), g_bg3: hexVal('i_g_bg3', '#00ff00'), g_bg4: hexVal('i_g_bg4', '#00ffff'), g_bg5: hexVal('i_g_bg5', '#0000ff'), g_txt1: hexVal('i_g_txt1', '#ffffff'), g_txt2: hexVal('i_g_txt2', '#aaaaaa')
+            });
+            renderBanner('edit-banner-preview', selBanner, cStr, '#1a1a1a');
+        }
+
+        function updateBannerConfigUI() {
+            const b = document.getElementById('edit-banner-select').value;
+            const configurable = ['standard','pro','ultra','giga_banner'];
+            document.getElementById('banner-controls').style.display = configurable.indexOf(b) >= 0 ? 'block' : 'none';
+            document.getElementById('bc-standard').style.display = (b === 'standard') ? 'flex' : 'none';
+            document.getElementById('bc-pro').style.display = (b === 'pro') ? 'flex' : 'none';
+            document.getElementById('bc-ultra').style.display = (b === 'ultra') ? 'flex' : 'none';
+            document.getElementById('bc-giga').style.display = (b === 'giga_banner') ? 'flex' : 'none';
+            liveUpdatePreview();
+        }
+
+        function collectProfileForm() {
+            const form = document.getElementById('edit-profile-form');
+            if (!form) return {};
+            const payload = {};
+            new FormData(form).forEach((value, key) => {
+                if (key === 'theme') return;
+                payload[key] = value;
+            });
+            return payload;
+        }
+
+        function setProfileSaveLabel(text, reset) {
+            const btn = document.getElementById('edit-profile-save');
+            if (!btn) return;
+            btn.textContent = text;
+            if (reset) {
+                setTimeout(() => {
+                    if (btn.textContent === text) btn.textContent = otT('common.saveEquip');
+                }, 1400);
+            }
+        }
+
+        function saveProfilePatch(fields, opts) {
+            opts = opts || {};
+            if (!fields || !Object.keys(fields).length) return Promise.resolve();
+            if (!opts.silent) {
+                const btn = document.getElementById('edit-profile-save');
+                if (btn) btn.disabled = true;
+                setProfileSaveLabel(otT('common.saving'));
+            }
+            return fetch('/api/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(fields)
+            })
+            .then(r => r.json().then(data => ({ ok: r.ok, data })).catch(() => ({ ok: false, data: { error: otT('common.saveFailed') } })))
+            .then(({ ok, data }) => {
+                const btn = document.getElementById('edit-profile-save');
+                if (btn) btn.disabled = false;
+                if (!ok) {
+                    if (!opts.silent) setProfileSaveLabel(otT('common.saveEquip'));
+                    oreAlert((data && data.error) || otT('common.saveFailed'));
+                    return;
+                }
+                if (typeof applyLiveProfileUpdate === 'function') {
+                    applyLiveProfileUpdate({
+                        username: data.username || document.body.getAttribute('data-ot-user') || '',
+                        steam_id: data.steam_id || document.body.getAttribute('data-ot-steam') || '',
+                        avatar: data.avatar,
+                        owns_title: data.owns_title,
+                        custom_title: data.custom_title,
+                        active_border: data.active_border,
+                        active_banner: data.active_banner,
+                        banner_config: data.banner_config
+                    });
+                }
+                if (!opts.silent) setProfileSaveLabel(otT('common.saved'), true);
+            })
+            .catch(() => {
+                const btn = document.getElementById('edit-profile-save');
+                if (btn) btn.disabled = false;
+                if (!opts.silent) setProfileSaveLabel(otT('common.saveEquip'));
+                if (!opts.silent) oreAlert(otT('common.saveFailed'));
+            });
+        }
+
+        function onEditBorderChange() {
+            liveUpdatePreview();
+            const el = document.getElementById('edit-border-select');
+            if (el) saveProfilePatch({ active_border: el.value }, { silent: true });
+        }
+
+        function onEditBannerChange() {
+            updateBannerConfigUI();
+            const el = document.getElementById('edit-banner-select');
+            if (el) saveProfilePatch({ active_banner: el.value }, { silent: true });
+        }
+
+        function fillEditCosmeticSelects(data) {
+            const labels = (data && data.cosmetic_labels) || {};
+            const bSel = document.getElementById('edit-border-select');
+            const banSel = document.getElementById('edit-banner-select');
+            const hasValue = (sel, val) => Array.from(sel.options).some(o => o.value === val);
+            if (bSel && data) {
+                const keep = bSel.value;
+                bSel.innerHTML = '<option value="">' + otT('common.none') + '</option>';
+                String(data.borders || '').split(',').forEach(b => {
+                    if (!b) return;
+                    bSel.innerHTML += `<option value="${b}">${labels[b] || b.toUpperCase()}</option>`;
+                });
+                bSel.value = hasValue(bSel, keep) ? keep : (data.active_border || '');
+            }
+            if (banSel && data) {
+                const keep = banSel.value;
+                banSel.innerHTML = '<option value="default">' + otT('common.defaultBase') + '</option>';
+                String(data.owned_banners || '').split(',').forEach(b => {
+                    if (!b) return;
+                    banSel.innerHTML += `<option value="${b}">${labels[b] || ('ORETIME ' + b.replace('_banner', '').toUpperCase())}</option>`;
+                });
+                banSel.value = hasValue(banSel, keep) ? keep : (data.active_banner || 'default');
+            }
+        }
+
+        const editProfileForm = document.getElementById('edit-profile-form');
+        if (editProfileForm) {
+            editProfileForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                liveUpdatePreview();
+                saveProfilePatch(collectProfileForm());
+            });
+        }
+
+        const openSteamBtn = document.getElementById('open-steam-modal');
+        if(openSteamBtn) {
+            openSteamBtn.addEventListener('click', (e) => { 
+                e.preventDefault(); 
+                document.getElementById('profile-dropdown').style.display = 'none'; 
+                document.body.style.overflow = 'hidden';
+                document.getElementById('steam-modal').style.display = 'flex';
+                updateBannerConfigUI();
+
+                fetch('/api/me?lite=1', { credentials: 'same-origin' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(!data.error) {
+                            const nameEl = document.getElementById('edit-profile-name');
+                            if (nameEl) nameEl.textContent = data.discord_name || data.username || '';
+                            const discEl = document.getElementById('edit-discord-handle');
+                            if (discEl) discEl.textContent = data.discord_name || data.username || '';
+                            const av = document.getElementById('edit-pc-avatar');
+                            if (av && data.avatar) av.src = data.avatar;
+
+                            document.getElementById('edit-votes').innerText = data.votes;
+                            document.getElementById('edit-favgame').innerText = data.fav_game;
+                            document.getElementById('edit-coins').innerText = data.ore_coins || 0;
+
+                            let currentUserConfig = {};
+                            try { currentUserConfig = JSON.parse(data.banner_config || '{}'); } catch(e){}
+                            
+                            if(currentUserConfig.bg_color) document.getElementById('i_bg_color').value = currentUserConfig.bg_color;
+                            if(currentUserConfig.text_glow) document.getElementById('i_text_glow').value = currentUserConfig.text_glow;
+                            if(currentUserConfig.u_bg1) document.getElementById('i_u_bg1').value = currentUserConfig.u_bg1;
+                            if(currentUserConfig.u_bg2) document.getElementById('i_u_bg2').value = currentUserConfig.u_bg2;
+                            if(currentUserConfig.u_bg3) document.getElementById('i_u_bg3').value = currentUserConfig.u_bg3;
+                            if(currentUserConfig.u_txt) document.getElementById('i_u_txt').value = currentUserConfig.u_txt;
+                            if(currentUserConfig.g_bg1) document.getElementById('i_g_bg1').value = currentUserConfig.g_bg1;
+                            if(currentUserConfig.g_bg2) document.getElementById('i_g_bg2').value = currentUserConfig.g_bg2;
+                            if(currentUserConfig.g_bg3) document.getElementById('i_g_bg3').value = currentUserConfig.g_bg3;
+                            if(currentUserConfig.g_bg4) document.getElementById('i_g_bg4').value = currentUserConfig.g_bg4;
+                            if(currentUserConfig.g_bg5) document.getElementById('i_g_bg5').value = currentUserConfig.g_bg5;
+                            if(currentUserConfig.g_txt1) document.getElementById('i_g_txt1').value = currentUserConfig.g_txt1;
+                            if(currentUserConfig.g_txt2) document.getElementById('i_g_txt2').value = currentUserConfig.g_txt2;
+
+                            fillEditCosmeticSelects(data);
+                            updateBannerConfigUI();
+
+                            const editTitleDisplay = document.getElementById('edit-custom-title-display');
+                            const editTitleGroup = document.getElementById('edit-title-group');
+                            
+                            if(data.owns_title) {
+                                editTitleGroup.style.display = 'block';
+                                document.getElementById('edit-custom-title').value = data.custom_title || '';
+                                if(data.custom_title) {
+                                    editTitleDisplay.innerText = data.custom_title;
+                                    editTitleDisplay.style.display = 'block';
+                                }
+                            } else {
+                                editTitleGroup.style.display = 'none';
+                                editTitleDisplay.style.display = 'none';
+                            }
+
+                            const editStatusDot = document.getElementById('edit-status-dot');
+                            const editDiscordBadge = document.getElementById('edit-discord-badge');
+                            if (data.discord_status === 'online') {
+                                editStatusDot.style.background = '#43b581';
+                                editStatusDot.style.boxShadow = '0 0 8px #43b581';
+                                editDiscordBadge.style.borderColor = '#43b581';
+                                editDiscordBadge.style.color = '#43b581';
+                            } else {
+                                editStatusDot.style.background = '#747f8d';
+                                editStatusDot.style.boxShadow = 'none';
+                                editDiscordBadge.style.borderColor = '#5865F2';
+                                editDiscordBadge.style.color = '#5865F2';
+                            }
+                        }
+                    })
+                    .catch(() => {});
+
+                fetch('/api/me?lite=1&steam=1', { credentials: 'same-origin' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.steam_name) {
+                            document.getElementById('edit-steam-badge').style.display = 'inline-flex';
+                            document.getElementById('edit-steam-name').innerText = data.steam_name;
+                        }
+                    })
+                    .catch(() => {});
+            });
+        }
+    </script>
+
+
+    <script>
+    (function seasonCountdown() {
+        const roots = document.querySelectorAll('.js-season-cd');
+        if (!roots.length) return;
+        const endsMs = Number(document.body.getAttribute('data-season-ends-ms') || 0);
+        const serverNowMs = Number(document.body.getAttribute('data-server-now-ms') || 0);
+        if (!endsMs) return;
+        const offset = serverNowMs ? (serverNowMs - Date.now()) : 0;
+        function pad2(n) { return String(Math.max(0, n)).padStart(2, '0'); }
+        function tick() {
+            const remaining = endsMs - (Date.now() + offset);
+            roots.forEach(function (root) {
+                if (remaining <= 0) {
+                    root.classList.add('is-ended');
+                    const liveEl = root.querySelector('.season-cd-live');
+                    const endedEl = root.querySelector('.season-cd-ended');
+                    if (liveEl) liveEl.hidden = true;
+                    if (endedEl) endedEl.hidden = false;
+                    return;
+                }
+                const total = Math.floor(remaining / 1000);
+                const parts = {
+                    d: pad2(Math.floor(total / 86400)),
+                    h: pad2(Math.floor((total % 86400) / 3600)),
+                    m: pad2(Math.floor((total % 3600) / 60)),
+                    s: pad2(total % 60)
+                };
+                Object.keys(parts).forEach(function (unit) {
+                    root.querySelectorAll('[data-unit="' + unit + '"]').forEach(function (el) {
+                        el.textContent = parts[unit];
+                    });
+                });
+            });
+        }
+        tick();
+        setInterval(tick, 1000);
+    })();
+    </script>
+
+    <script>
+    (function liveLooks() {
+        if (!document.body.classList.contains('has-app-shell')) return;
+        var rev = 0;
+        function tick() {
+            if (document.hidden) return;
+            fetch('/api/looks?rev=' + rev, { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data || data.error || data.unchanged) return;
+                    rev = data.rev || rev;
+                    (data.looks || []).forEach(function (look) {
+                        applyLiveProfileUpdate(look, { fromPoll: true });
+                    });
+                })
+                .catch(function () {});
+        }
+        setTimeout(tick, 12000);
+        setInterval(tick, 25000);
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) tick();
+        });
+        if (_otLooksChannel) {
+            _otLooksChannel.onmessage = function (ev) {
+                if (ev && ev.data) applyLiveProfileUpdate(ev.data, { fromBroadcast: true });
+            };
+        }
+        window.addEventListener('storage', function (e) {
+            if (e.key !== 'ot_profile_look' || !e.newValue) return;
+            try { applyLiveProfileUpdate(JSON.parse(e.newValue), { fromBroadcast: true }); }
+            catch (err) {}
+        });
+    })();
+    </script>
+
+</body>
+</html>

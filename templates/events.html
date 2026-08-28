@@ -1,0 +1,994 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set next_sat = saturdays[0] %}
+
+<style>
+    .steam-card {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 55%, transparent), rgba(0,0,0,0.32));
+        border-radius: 16px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        text-align: left;
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+    }
+    .steam-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 3px;
+        z-index: 1;
+        background: var(--accent);
+        box-shadow: 0 0 16px var(--accent);
+    }
+    .steam-card:hover { transform: translateY(-5px); box-shadow: 0 14px 28px rgba(0,0,0,0.45); }
+    .steam-banner { width: 100%; height: 122px; object-fit: cover; display: block; }
+    .steam-box-green { border: 2px solid #3fb950; }
+    .steam-box-green::before { background: #3fb950; box-shadow: 0 0 16px #3fb950; }
+    .steam-box-green:hover { box-shadow: 0 0 28px rgba(63,185,80,0.28); }
+    .steam-box-accent { border: 2px solid var(--accent); }
+    .steam-art { position: relative; background: #111; }
+    .steam-pill {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 0.72em;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #111;
+    }
+    .steam-pill.ready { background: #3fb950; }
+    .steam-pill.gap { background: var(--accent); }
+    .steam-body { padding: 14px 14px 16px; }
+    .steam-body h3 { margin: 0 0 10px; font-size: 1.08em; color: var(--text-main); }
+    .steam-meter {
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.08);
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+    .steam-meter-fill { height: 100%; border-radius: inherit; background: var(--accent); }
+    .steam-box-green .steam-meter-fill { background: #3fb950; }
+    .steam-count { margin: 0 0 10px; font-size: 0.78em; font-weight: 700; color: var(--muted); }
+    .steam-ok { color: #3fb950; font-weight: 800; font-size: 1.05em; }
+    .steam-miss { color: #ff4c4c; font-weight: 800; }
+    .steam-missing {
+        font-size: 0.9em;
+        opacity: 0.9;
+        margin-top: 6px;
+        color: var(--text-main);
+        word-wrap: break-word;
+        line-height: 1.45;
+    }
+    .steam-missing span { cursor: pointer; font-weight: 800; }
+    .steam-missing span:hover { color: var(--accent); }
+    .steam-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 18px;
+        margin-top: 18px;
+        text-align: left;
+    }
+
+    .vote-arena {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 20px 16px 18px;
+        text-align: center;
+        background:
+            radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 58%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 92%, #000), var(--bg-box));
+        border: var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+    }
+    .vote-kicker {
+        margin: 0 0 8px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        font-size: 0.72em;
+        font-weight: 800;
+        color: var(--accent);
+        opacity: 0.9;
+    }
+    .vote-arena h2 { margin: 0 0 6px; }
+    .vote-hint { margin: 0 0 8px; color: var(--muted); font-size: 0.95em; }
+    .vote-saved {
+        display: inline-block;
+        margin: 0 0 20px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.78em;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    .vote-podium {
+        display: grid;
+        grid-template-columns: 1fr 1.18fr 1fr;
+        gap: 12px;
+        align-items: end;
+        margin: 10px 0 6px;
+        padding-top: 12px;
+    }
+    .vote-slot {
+        position: relative;
+        overflow: hidden;
+        text-align: left;
+        padding: 12px 12px 12px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 55%, transparent), rgba(0,0,0,0.32));
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+    .vote-slot::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 3px;
+        background: var(--slot-line);
+        box-shadow: 0 0 16px var(--slot-line);
+    }
+    .vote-slot.gold { --slot-line: #e8c547; border-color: rgba(232,197,71,0.55); box-shadow: 0 14px 32px rgba(232,197,71,0.18); }
+    .vote-slot.silver { --slot-line: #c0c7d4; border-color: rgba(192,199,212,0.4); }
+    .vote-slot.bronze { --slot-line: #cd7f32; border-color: rgba(205,127,50,0.45); }
+    .vote-slot.filled.gold { box-shadow: 0 0 28px rgba(232,197,71,0.32); }
+    .vote-slot.filled.silver { box-shadow: 0 0 22px rgba(192,199,212,0.22); }
+    .vote-slot.filled.bronze { box-shadow: 0 0 22px rgba(205,127,50,0.24); }
+    .vote-slot-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .vote-slot-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .vote-medal { font-size: 1.55em; line-height: 1; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+    .vote-rank-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .vote-rank-title { font-weight: 900; font-size: 0.95em; letter-spacing: 0.04em; text-transform: uppercase; color: var(--slot-line); }
+    .vote-rank-sub { font-size: 0.78em; font-weight: 700; color: var(--muted); }
+    .vote-pts {
+        flex-shrink: 0;
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 0.72em;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #111;
+        background: var(--slot-line);
+    }
+    .vote-art {
+        display: none;
+        width: 100%;
+        height: 56px;
+        margin-bottom: 8px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--slot-line) 45%, transparent);
+        background: #111;
+    }
+    .vote-slot.has-art .vote-art { display: block; }
+    .vote-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .vote-pick-name {
+        min-height: 1.3em;
+        margin: 0 0 8px;
+        font-size: 0.92em;
+        font-weight: 800;
+        color: var(--text-main);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .vote-slot:not(.filled) .vote-pick-name { color: var(--muted); font-weight: 700; }
+    .vote-slot select {
+        width: 100%;
+        margin: 0;
+        background: var(--input-bg);
+        border-color: color-mix(in srgb, var(--slot-line) 55%, transparent);
+        font-weight: 700;
+    }
+    .vote-slot select:focus { border-color: var(--slot-line); box-shadow: 0 0 0 3px color-mix(in srgb, var(--slot-line) 22%, transparent); }
+    .vote-slot-wrap { display: flex; flex-direction: column; --slot-line: var(--accent); }
+    .vote-slot-wrap.gold { grid-column: 2; transform: translateY(-16px); --slot-line: #e8c547; }
+    .vote-slot-wrap.silver { grid-column: 1; --slot-line: #c0c7d4; }
+    .vote-slot-wrap.bronze { grid-column: 3; --slot-line: #cd7f32; }
+    .vote-plinth {
+        height: 12px;
+        margin: 0 18px 0;
+        border-radius: 0 0 10px 10px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--slot-line) 55%, #111), rgba(0,0,0,0.45));
+        opacity: 0.85;
+    }
+    .vote-slot-wrap.gold .vote-plinth { height: 24px; }
+    .vote-slot-wrap.silver .vote-plinth { height: 16px; }
+    .vote-slot-wrap.bronze .vote-plinth { height: 10px; }
+    .vote-submit {
+        display: block;
+        width: 100%;
+        max-width: 360px;
+        margin: 16px auto 0;
+        padding: 12px 16px;
+        font-size: 1em;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        border-radius: 12px;
+        background: linear-gradient(180deg, var(--btn-hover), var(--btn));
+        box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+    .vote-submit:hover { transform: translateY(-2px); }
+    .vote-locked-panel { padding: 42px 24px; }
+    .vote-locked-panel h2 { color: #ff8a8a; }
+    @media (max-width: 760px) {
+        .vote-podium { grid-template-columns: 1fr; }
+        .vote-slot-wrap.gold, .vote-slot-wrap.silver, .vote-slot-wrap.bronze {
+            grid-column: auto;
+            transform: none;
+        }
+        .vote-slot.gold { transform: none; }
+        .vote-plinth { display: none; }
+    }
+
+    .mvp-use {
+        margin: 16px auto 0;
+        max-width: 420px;
+        padding: 12px 14px;
+        text-align: left;
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    }
+    .mvp-use p { margin: 0 0 8px; font-size: 0.88em; font-weight: 700; }
+    .mvp-use-title { color: var(--accent); font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.72em; margin: 0 0 6px; }
+    .mvp-choices { display: flex; gap: 8px; flex-wrap: wrap; }
+    .mvp-choices label {
+        flex: 1;
+        min-width: 140px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+        cursor: pointer;
+        font-size: 0.82em;
+        font-weight: 800;
+    }
+    .mvp-choices input { width: auto; margin: 0; }
+    .mvp-choices label:has(input:checked) {
+        border-color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 16%, transparent);
+        color: var(--accent);
+    }
+    .mvp-active {
+        margin: 16px auto 0;
+        max-width: 420px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 0.78em;
+        font-weight: 800;
+        color: #FFD700;
+        background: rgba(255,215,0,0.12);
+        border: 1px solid rgba(255,215,0,0.35);
+    }
+
+    .ev-panel {
+        position: relative;
+        overflow: hidden;
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 20px 18px 18px;
+        text-align: center;
+        background:
+            radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 58%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 92%, #000), var(--bg-box));
+        border: var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+    }
+    .ev-panel h2 { margin: 0 0 6px; }
+
+    .rank-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+        gap: 18px;
+        align-items: start;
+        margin-top: 18px;
+        text-align: left;
+    }
+    .rank-chart-card {
+        position: relative;
+        overflow: hidden;
+        padding: 18px 16px 12px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 55%, transparent), rgba(0,0,0,0.32));
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+    }
+    .rank-chart-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 3px;
+        background: var(--accent);
+        box-shadow: 0 0 16px var(--accent);
+    }
+    .rank-board {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .rank-row {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 55%, transparent), rgba(0,0,0,0.32));
+        border: 1px solid rgba(255,255,255,0.08);
+        --slot-line: var(--accent);
+    }
+    .rank-row.gold { --slot-line: #e8c547; border-color: rgba(232,197,71,0.45); box-shadow: 0 0 18px rgba(232,197,71,0.16); }
+    .rank-row.silver { --slot-line: #c0c7d4; border-color: rgba(192,199,212,0.35); }
+    .rank-row.bronze { --slot-line: #cd7f32; border-color: rgba(205,127,50,0.4); }
+    .rank-medal { font-size: 1.25em; text-align: center; line-height: 1; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+    .rank-place {
+        font-size: 0.78em;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        color: var(--slot-line);
+    }
+    .rank-name {
+        margin: 0;
+        font-size: 0.92em;
+        font-weight: 800;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .rank-bar-track {
+        height: 4px;
+        margin-top: 6px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.08);
+        overflow: hidden;
+    }
+    .rank-bar {
+        height: 100%;
+        border-radius: inherit;
+        background: var(--slot-line);
+        box-shadow: 0 0 10px var(--slot-line);
+    }
+    .rank-pts {
+        flex-shrink: 0;
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 0.72em;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #111;
+        background: var(--slot-line);
+    }
+    .rank-empty {
+        padding: 28px 16px;
+        text-align: center;
+        border-radius: 12px;
+        border: 1px dashed color-mix(in srgb, var(--accent) 35%, transparent);
+        background: rgba(0,0,0,0.18);
+        list-style: none;
+    }
+    .rank-art {
+        width: 42px;
+        height: 24px;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #111;
+        border: 1px solid color-mix(in srgb, var(--slot-line) 45%, transparent);
+        flex-shrink: 0;
+    }
+    .rank-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .rank-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+    .radar-arena { text-align: left; }
+    .radar-arena .radar-cols { margin-top: 18px; }
+    .radar-arena .radar-col { min-height: 140px; }
+    .radar-arena .radar-col h3 {
+        margin: 0 0 12px;
+        font-size: 0.78em;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-weight: 800;
+    }
+    .radar-arena .radar-col.in h3 { color: #4CAF50; }
+    .radar-arena .radar-col.maybe h3 { color: #FFC107; }
+    .radar-arena .radar-col.out h3 { color: #F44336; }
+    .radar-count { opacity: 0.75; font-weight: 800; }
+    .radar-op {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        min-width: 64px;
+        max-width: 76px;
+    }
+    .radar-op span {
+        font-size: 0.72em;
+        font-weight: 800;
+        max-width: 76px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .radar-arena .radar-avatars { justify-content: flex-start; }
+
+    .ts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+        text-align: left;
+    }
+    .ts-card {
+        position: relative;
+        overflow: hidden;
+        padding: 16px 16px 14px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--bg-main) 55%, transparent), rgba(0,0,0,0.32));
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+    }
+    .ts-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 3px;
+        background: var(--accent);
+        box-shadow: 0 0 16px var(--accent);
+    }
+    .ts-game {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 12px;
+        font-size: 1.05em;
+        font-weight: 800;
+    }
+    .ts-emoji { font-size: 1.35em; line-height: 1; }
+    .ts-code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.78em;
+        word-break: break-all;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(0,0,0,0.35);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: var(--text-main);
+        margin: 0 0 12px;
+        user-select: all;
+        line-height: 1.45;
+    }
+    .ts-copy {
+        width: 100%;
+        margin-top: 0;
+        padding: 9px 12px;
+        font-size: 0.9em;
+        border-radius: 8px;
+    }
+    .ts-copy.copied {
+        background: #3fb950 !important;
+        border-color: #3fb950 !important;
+        color: #111 !important;
+    }
+
+    @media (max-width: 860px) {
+        .rank-layout { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="page-header">
+    <h1>🎮 <span data-i18n="events.session">{{ t('events.session') }}</span> {{ next_sat }}</h1>
+    <p class="page-sub" data-i18n="events.sub">{{ t('events.sub') }}</p>
+</div>
+
+{% if voting_locked %}
+<div class="alert-lock">
+    <h2>🔒 <span data-i18n="events.votingClosed">{{ t('events.votingClosed') }}</span></h2>
+    <p style="margin: 6px 0 0 0; font-weight: 800;" data-i18n="events.lockedByAdmin">{{ t('events.lockedByAdmin') }}</p>
+</div>
+{% endif %}
+
+<div class="tab-container">
+    <button class="tab-btn active" onclick="openTab('tab-vote', this)">🗳️ <span data-i18n="events.voteTab">{{ t('events.voteTab') }}</span></button>
+    <button class="tab-btn" onclick="openTab('tab-ranking', this)">📊 <span data-i18n="events.rankingTab">{{ t('events.rankingTab') }}</span></button>
+    <button class="tab-btn" onclick="openTab('tab-steam', this)">🔗 <span data-i18n="events.steamTab">{{ t('events.steamTab') }}</span></button>
+    <button class="tab-btn" onclick="openTab('tab-radar', this)">📡 <span data-i18n="events.radarTab">{{ t('events.radarTab') }}</span></button>
+    <button class="tab-btn" onclick="openTab('tab-codes', this)">📌 <span data-i18n="events.codesTab">{{ t('events.codesTab') }}</span></button>
+</div>
+
+<div id="tab-vote" class="tab-content active">
+    {% if not voting_locked %}
+    {% set ballot = user_votes[next_sat] %}
+    <div class="vote-arena">
+        <p class="vote-kicker" data-i18n="events.podiumKicker">{{ t('events.podiumKicker') }}</p>
+        <h2 data-i18n="events.chooseFav">{{ t('events.chooseFav') }}</h2>
+        <p class="vote-hint" data-i18n="events.voteHint">{{ t('events.voteHint') }}</p>
+        {% if ballot and (ballot.game1 or ballot.game2 or ballot.game3) %}
+        <div class="vote-saved" data-i18n="events.ballotSaved">{{ t('events.ballotSaved') }}</div>
+        {% endif %}
+
+        <form action="/vote" method="POST" class="form-stack" style="gap: 0;">
+            <input type="hidden" name="target_date" value="{{ next_sat }}">
+
+            <div class="vote-podium">
+                {% set g1 = ballot.game1 if ballot else '' %}
+                {% set app1 = game_appids.get(g1, 'non') if g1 else 'non' %}
+                <div class="vote-slot-wrap gold">
+                    <div class="vote-slot gold{% if g1 %} filled{% endif %}{% if g1 and app1 != 'non' %} has-art{% endif %}">
+                        <div class="vote-slot-top">
+                            <div class="vote-slot-id">
+                                <span class="vote-medal" aria-hidden="true">🥇</span>
+                                <div class="vote-rank-meta">
+                                    <span class="vote-rank-title" data-i18n="events.gold">{{ t('events.gold') }}</span>
+                                    <span class="vote-rank-sub" data-i18n="events.rank1short">{{ t('events.rank1short') }}</span>
+                                </div>
+                            </div>
+                            <span class="vote-pts" data-i18n="events.pts3">{{ t('events.pts3') }}</span>
+                        </div>
+                        <div class="vote-art">
+                            <img alt="" data-appid="{{ app1 }}" data-name="{{ g1 }}" onerror="steamImgFallback(this)"{% if g1 and app1 != 'non' %} src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ app1 }}/header.jpg"{% endif %}>
+                        </div>
+                        <p class="vote-pick-name">{% if g1 %}{{ g1 }}{% else %}<span data-i18n="events.pick1">{{ t('events.pick1') }}</span>{% endif %}</p>
+                        <label class="form-label" for="vote-game1" style="position:absolute;left:-9999px;" data-i18n="events.rank1">{{ t('events.rank1') }}</label>
+                        <select id="vote-game1" name="game1">
+                            <option value="" data-i18n="events.selectGame">{{ t('events.selectGame') }}</option>
+                            {% for game in games %}
+                                <option value="{{ game }}" data-appid="{{ game_appids.get(game, 'non') }}" {% if g1 == game %}selected{% endif %}>{{ game }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="vote-plinth" aria-hidden="true"></div>
+                </div>
+
+                {% set g2 = ballot.game2 if ballot else '' %}
+                {% set app2 = game_appids.get(g2, 'non') if g2 else 'non' %}
+                <div class="vote-slot-wrap silver">
+                    <div class="vote-slot silver{% if g2 %} filled{% endif %}{% if g2 and app2 != 'non' %} has-art{% endif %}">
+                        <div class="vote-slot-top">
+                            <div class="vote-slot-id">
+                                <span class="vote-medal" aria-hidden="true">🥈</span>
+                                <div class="vote-rank-meta">
+                                    <span class="vote-rank-title" data-i18n="events.silver">{{ t('events.silver') }}</span>
+                                    <span class="vote-rank-sub" data-i18n="events.rank2short">{{ t('events.rank2short') }}</span>
+                                </div>
+                            </div>
+                            <span class="vote-pts" data-i18n="events.pts2">{{ t('events.pts2') }}</span>
+                        </div>
+                        <div class="vote-art">
+                            <img alt="" data-appid="{{ app2 }}" data-name="{{ g2 }}" onerror="steamImgFallback(this)"{% if g2 and app2 != 'non' %} src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ app2 }}/header.jpg"{% endif %}>
+                        </div>
+                        <p class="vote-pick-name">{% if g2 %}{{ g2 }}{% else %}<span data-i18n="events.pick2">{{ t('events.pick2') }}</span>{% endif %}</p>
+                        <label class="form-label" for="vote-game2" style="position:absolute;left:-9999px;" data-i18n="events.rank2">{{ t('events.rank2') }}</label>
+                        <select id="vote-game2" name="game2">
+                            <option value="" data-i18n="events.selectGame">{{ t('events.selectGame') }}</option>
+                            {% for game in games %}
+                                <option value="{{ game }}" data-appid="{{ game_appids.get(game, 'non') }}" {% if g2 == game %}selected{% endif %}>{{ game }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="vote-plinth" aria-hidden="true"></div>
+                </div>
+
+                {% set g3 = ballot.game3 if ballot else '' %}
+                {% set app3 = game_appids.get(g3, 'non') if g3 else 'non' %}
+                <div class="vote-slot-wrap bronze">
+                    <div class="vote-slot bronze{% if g3 %} filled{% endif %}{% if g3 and app3 != 'non' %} has-art{% endif %}">
+                        <div class="vote-slot-top">
+                            <div class="vote-slot-id">
+                                <span class="vote-medal" aria-hidden="true">🥉</span>
+                                <div class="vote-rank-meta">
+                                    <span class="vote-rank-title" data-i18n="events.bronze">{{ t('events.bronze') }}</span>
+                                    <span class="vote-rank-sub" data-i18n="events.rank3short">{{ t('events.rank3short') }}</span>
+                                </div>
+                            </div>
+                            <span class="vote-pts" data-i18n="events.pts1">{{ t('events.pts1') }}</span>
+                        </div>
+                        <div class="vote-art">
+                            <img alt="" data-appid="{{ app3 }}" data-name="{{ g3 }}" onerror="steamImgFallback(this)"{% if g3 and app3 != 'non' %} src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ app3 }}/header.jpg"{% endif %}>
+                        </div>
+                        <p class="vote-pick-name">{% if g3 %}{{ g3 }}{% else %}<span data-i18n="events.pick3">{{ t('events.pick3') }}</span>{% endif %}</p>
+                        <label class="form-label" for="vote-game3" style="position:absolute;left:-9999px;" data-i18n="events.rank3">{{ t('events.rank3') }}</label>
+                        <select id="vote-game3" name="game3">
+                            <option value="" data-i18n="events.selectGame">{{ t('events.selectGame') }}</option>
+                            {% for game in games %}
+                                <option value="{{ game }}" data-appid="{{ game_appids.get(game, 'non') }}" {% if g3 == game %}selected{% endif %}>{{ game }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="vote-plinth" aria-hidden="true"></div>
+                </div>
+            </div>
+
+            {% set boosted = ballot and (ballot.multiplier or 1) >= 2 %}
+            {% if boosted %}
+            <div class="mvp-active" data-i18n="events.mvpActive">{{ t('events.mvpActive') }}</div>
+            {% elif mvp_stock and mvp_stock > 0 %}
+            <div class="mvp-use">
+                <p class="mvp-use-title">🌟 <span data-i18n="events.mvpTitle">{{ t('events.mvpTitle') }}</span></p>
+                <p data-i18n="events.mvpHave" data-i18n-vars='{{ {"n": mvp_stock} | tojson }}'>{{ t('events.mvpHave', n=mvp_stock) }}</p>
+                <div class="mvp-choices">
+                    <label>
+                        <input type="radio" name="use_mvp" value="0" checked>
+                        <span data-i18n="events.skipMvp">{{ t('events.skipMvp') }}</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="use_mvp" value="1">
+                        <span data-i18n="events.useMvp">{{ t('events.useMvp') }}</span>
+                    </label>
+                </div>
+            </div>
+            {% endif %}
+
+            <button type="submit" class="vote-submit">🚀 <span data-i18n="events.voteBtn">{{ t('events.voteBtn') }}</span></button>
+        </form>
+    </div>
+    {% else %}
+    <div class="vote-arena vote-locked-panel">
+        <p class="vote-kicker" data-i18n="events.ballotSealed">{{ t('events.ballotSealed') }}</p>
+        <h2>🔒 <span data-i18n="events.votingIsClosed">{{ t('events.votingIsClosed') }}</span></h2>
+        <p class="vote-hint" style="margin: 0;" data-i18n="events.lockedHint">{{ t('events.lockedHint') }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<div id="tab-ranking" class="tab-content">
+    {% set live = saturday_stats[next_sat] %}
+    {% set ns = namespace(shown=0, max_pts=0) %}
+    {% for game, pts in live.items() %}
+        {% if pts > ns.max_pts %}{% set ns.max_pts = pts %}{% endif %}
+    {% endfor %}
+    <div class="ev-panel rank-arena">
+        <p class="vote-kicker" data-i18n="events.podiumLive">{{ t('events.podiumLive') }}</p>
+        <h2>📊 <span data-i18n="events.powerRanking">{{ t('events.powerRanking') }}</span></h2>
+        <p class="vote-hint" data-i18n="events.tallyHint">{{ t('events.tallyHint') }}</p>
+
+        <div class="rank-layout">
+            <div class="rank-chart-card">
+                <canvas id="voteChart" height="120"></canvas>
+            </div>
+            <ol class="rank-board">
+                {% for game, pts in live.items() %}
+                    {% if pts > 0 %}
+                    {% set ns.shown = ns.shown + 1 %}
+                    {% set appid = game_appids.get(game, 'non') %}
+                    <li class="rank-row{% if ns.shown == 1 %} gold{% elif ns.shown == 2 %} silver{% elif ns.shown == 3 %} bronze{% endif %}">
+                        <span class="rank-medal" aria-hidden="true">{% if ns.shown == 1 %}🥇{% elif ns.shown == 2 %}🥈{% elif ns.shown == 3 %}🥉{% else %}<span class="rank-place">#{{ ns.shown }}</span>{% endif %}</span>
+                        <div class="rank-id">
+                            {% if appid != 'non' %}
+                            <div class="rank-art">
+                                <img alt="" data-appid="{{ appid }}" data-name="{{ game }}" onerror="steamImgFallback(this)" src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ appid }}/header.jpg">
+                            </div>
+                            {% endif %}
+                            <div style="min-width:0;">
+                                <p class="rank-name">{{ game }}</p>
+                                <div class="rank-bar-track">
+                                    <div class="rank-bar" style="width: {{ (pts / ns.max_pts * 100) if ns.max_pts else 0 }}%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="rank-pts">{{ pts }} pts</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                {% if ns.shown == 0 %}
+                <li class="rank-empty muted" data-i18n="events.noPoints">{{ t('events.noPoints') }}</li>
+                {% endif %}
+            </ol>
+        </div>
+    </div>
+</div>
+
+<div id="tab-steam" class="tab-content">
+    <div class="ev-panel steam-arena">
+        <p class="vote-kicker" data-i18n="events.loadoutCheck">{{ t('events.loadoutCheck') }}</p>
+        <h2>🔗 <span data-i18n="events.steamOwnership">{{ t('events.steamOwnership') }}</span></h2>
+        <p class="vote-hint" data-i18n="events.steamHint">{{ t('events.steamHint') }}</p>
+        <div class="steam-grid">
+        {% for game, stats in steam_stats.items() %}
+            {% if stats.is_steam %}
+
+                {% set border_class = 'steam-box-green' if stats.missing_count == 0 else 'steam-box-accent' %}
+                {% set appid = game_appids.get(game, 'non') %}
+                {% set owned = stats.total_users - stats.missing_count %}
+
+                <div class="steam-card {{ border_class }}">
+                    <div class="steam-art">
+                        <img src="https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{{ appid }}/header.jpg" alt="{{ game }}" class="steam-banner" data-appid="{{ appid }}" data-name="{{ game }}" onerror="steamImgFallback(this)">
+                        {% if stats.missing_count == 0 %}
+                        <span class="steam-pill ready" data-i18n="library.ready">{{ t('library.ready') }}</span>
+                        {% else %}
+                        <span class="steam-pill gap" data-i18n="events.missingN" data-i18n-vars='{{ {"n": stats.missing_count} | tojson }}'>{{ t('events.missingN', n=stats.missing_count) }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="steam-body">
+                        <h3>{{ game }}</h3>
+                        <div class="steam-meter" aria-hidden="true">
+                            <div class="steam-meter-fill" style="width: {{ ((owned / stats.total_users * 100) if stats.total_users else 0) }}%;"></div>
+                        </div>
+                        <p class="steam-count" data-i18n="events.ownIt" data-i18n-vars='{{ {"owned": owned, "total": stats.total_users} | tojson }}'>{{ t('events.ownIt', owned=owned, total=stats.total_users) }}</p>
+                        {% if stats.missing_count == 0 %}
+                            <span class="steam-ok">✅ <span data-i18n="events.everyoneHas">{{ t('events.everyoneHas') }}</span></span>
+                        {% else %}
+                            <span class="steam-miss">❌ <span data-i18n="events.missingFor">{{ t('events.missingFor') }}</span></span>
+                            <div class="steam-missing">
+                                {% for name in stats.missing_users %}{% if not loop.first %}, {% endif %}<span onclick='openPlayerCard({{ name | tojson }})'>{{ name }}</span>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div id="tab-radar" class="tab-content">
+    <div class="ev-panel radar-arena">
+        <div class="ev-radar-scan" aria-hidden="true"></div>
+        <p class="vote-kicker"><span data-i18n="events.radarKicker">{{ t('events.radarKicker') }}</span> · {{ next_sat }}</p>
+        <h2>📡 <span data-i18n="events.deployStatus">{{ t('events.deployStatus') }}</span></h2>
+        <p class="vote-hint" data-i18n="events.whoPlaying">{{ t('events.whoPlaying') }}</p>
+
+        <div class="radar-cols">
+            <div class="radar-col in">
+                <h3><span data-i18n="events.inLabel">{{ t('events.inLabel') }}</span> <span class="radar-count">{{ radar_data['yes']|length }}</span></h3>
+                <div class="radar-avatars">
+                    {% for u in radar_data['yes'] %}
+                    <div class="radar-op">
+                        <span class="player-card {{ border_wrap_class(u.active_border) }}" data-player-username="{{ u.username }}" data-player-steam="{{ u.steam_id or '' }}" data-active-border="{{ u.active_border or '' }}" data-default-border="2px solid #4CAF50">
+                            <img src="{{ u.avatar or default_avatar }}" class="{{ border_img_class(u.active_border) }}" onclick='openPlayerCard({{ u.username | tojson }})' data-tooltip="{{ u.username }}" style="border: 2px solid #4CAF50;{% if border_wrap_class(u.active_border) %}border:none;{% endif %}">
+                        </span>
+                        <span>{{ u.username }}</span>
+                    </div>
+                    {% else %} <span class="muted" style="font-size:0.9em;" data-i18n="events.noneYet">{{ t('events.noneYet') }}</span> {% endfor %}
+                </div>
+            </div>
+            <div class="radar-col maybe">
+                <h3><span data-i18n="events.maybeLabel">{{ t('events.maybeLabel') }}</span> <span class="radar-count">{{ radar_data['maybe']|length }}</span></h3>
+                <div class="radar-avatars">
+                    {% for u in radar_data['maybe'] %}
+                    <div class="radar-op">
+                        <span class="player-card {{ border_wrap_class(u.active_border) }}" data-player-username="{{ u.username }}" data-player-steam="{{ u.steam_id or '' }}" data-active-border="{{ u.active_border or '' }}" data-default-border="2px solid #FFC107">
+                            <img src="{{ u.avatar or default_avatar }}" class="{{ border_img_class(u.active_border) }}" onclick='openPlayerCard({{ u.username | tojson }})' data-tooltip="{{ u.username }}" style="border: 2px solid #FFC107; opacity: 0.8;{% if border_wrap_class(u.active_border) %}border:none;{% endif %}">
+                        </span>
+                        <span>{{ u.username }}</span>
+                    </div>
+                    {% else %} <span class="muted" style="font-size:0.9em;" data-i18n="events.noneYet">{{ t('events.noneYet') }}</span> {% endfor %}
+                </div>
+            </div>
+            <div class="radar-col out">
+                <h3><span data-i18n="events.outLabel">{{ t('events.outLabel') }}</span> <span class="radar-count">{{ radar_data['no']|length }}</span></h3>
+                <div class="radar-avatars">
+                    {% for u in radar_data['no'] %}
+                    <div class="radar-op">
+                        <span class="player-card {{ border_wrap_class(u.active_border) }}" data-player-username="{{ u.username }}" data-player-steam="{{ u.steam_id or '' }}" data-active-border="{{ u.active_border or '' }}" data-default-border="2px solid #F44336">
+                            <img src="{{ u.avatar or default_avatar }}" class="{{ border_img_class(u.active_border) }}" onclick='openPlayerCard({{ u.username | tojson }})' data-tooltip="{{ u.username }}" style="border: 2px solid #F44336; filter: grayscale(100%); opacity:0.6;{% if border_wrap_class(u.active_border) %}border:none;{% endif %}">
+                        </span>
+                        <span>{{ u.username }}</span>
+                    </div>
+                    {% else %} <span class="muted" style="font-size:0.9em;" data-i18n="events.noneYet">{{ t('events.noneYet') }}</span> {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% set thunder_codes = [
+    {'emoji': '😃', 'name': 'REPO', 'code': '019d358e-f308-8d55-b0cf-82d94030d163'},
+    {'emoji': '🗻', 'name': 'Peak', 'code': '019d1101-60d6-f7f7-b8d9-9ecc6d13cb9a'},
+    {'emoji': '🏔️', 'name': 'Peak Lite', 'code': '01a006cc-94a6-06b5-df49-f08d4492bc66'},
+    {'emoji': '🏭', 'name': 'Lethal Company (Essential Only)', 'code': '0195bf57-61cb-dc9a-dd03-d539e5e1b3df'},
+] %}
+<div id="tab-codes" class="tab-content">
+    <div class="ev-panel">
+        <p class="vote-kicker" data-i18n="events.codesKicker">{{ t('events.codesKicker') }}</p>
+        <h2>📌 <span data-i18n="events.codesTitle">{{ t('events.codesTitle') }}</span></h2>
+        <p class="vote-hint" data-i18n="events.codesHint">{{ t('events.codesHint') }}</p>
+        <div class="ts-grid">
+            {% for pack in thunder_codes %}
+            <div class="ts-card">
+                <p class="ts-game"><span class="ts-emoji" aria-hidden="true">{{ pack.emoji }}</span><span>{{ pack.name }}</span></p>
+                <p class="ts-code">{{ pack.code }}</p>
+                <button type="button" class="ts-copy" data-code="{{ pack.code }}" onclick="copyThunderCode(this)">
+                    <span class="js-copy-label" data-i18n="events.copyCode">{{ t('events.copyCode') }}</span>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    let voteChart = null;
+
+    function ensureVoteChart(tries) {
+        tries = tries || 0;
+        const canvas = document.getElementById('voteChart');
+        if (!canvas) return;
+        if (typeof Chart === 'undefined') {
+            if (tries < 25) setTimeout(function () { ensureVoteChart(tries + 1); }, 200);
+            return;
+        }
+        if (voteChart) {
+            voteChart.resize();
+            return;
+        }
+
+        const rootStyles = getComputedStyle(document.documentElement);
+        const accentColor = rootStyles.getPropertyValue('--accent').trim();
+
+        const rawData = {{ saturday_stats[next_sat] | tojson }};
+        const labels = Object.keys(rawData);
+        const dataPoints = Object.values(rawData);
+        const podiumFill = ['rgba(232,197,71,0.72)', 'rgba(192,199,212,0.62)', 'rgba(205,127,50,0.68)'];
+        const podiumStroke = ['#e8c547', '#c0c7d4', '#cd7f32'];
+        const fills = dataPoints.map((_, i) => podiumFill[i] || (accentColor + '80'));
+        const strokes = dataPoints.map((_, i) => podiumStroke[i] || accentColor);
+
+        const ctx = canvas.getContext('2d');
+        voteChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: (window.OTI18n && OTI18n.t('events.pointsLive')) || 'Points (Live)',
+                    data: dataPoints,
+                    backgroundColor: fills,
+                    borderColor: strokes,
+                    borderWidth: 2,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#ffffff', stepSize: 1 },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    x: {
+                        ticks: { color: '#ffffff' },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+    function copyThunderCode(btn) {
+        const code = btn && btn.getAttribute('data-code');
+        if (!code) return;
+        const label = btn.querySelector('.js-copy-label');
+        const markCopied = function () {
+            btn.classList.add('copied');
+            if (label) {
+                label.textContent = (window.OTI18n && OTI18n.t('events.copied')) || 'Copied';
+            }
+            setTimeout(function () {
+                btn.classList.remove('copied');
+                if (label) {
+                    label.textContent = (window.OTI18n && OTI18n.t('events.copyCode')) || 'Copy';
+                }
+            }, 1400);
+        };
+        const fallback = function () {
+            const ta = document.createElement('textarea');
+            ta.value = code;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'absolute';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(ta);
+            markCopied();
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(markCopied).catch(fallback);
+        } else {
+            fallback();
+        }
+    }
+
+    function openTab(tabId, btnElement) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        const tab = document.getElementById(tabId);
+        if (tab) tab.classList.add('active');
+        if (btnElement) btnElement.classList.add('active');
+        if (tabId === 'tab-ranking') {
+            setTimeout(ensureVoteChart, 50);
+        }
+    }
+
+    function updateVoteDropdowns() {
+        const selects = [
+            document.querySelector('select[name="game1"]'),
+            document.querySelector('select[name="game2"]'),
+            document.querySelector('select[name="game3"]')
+        ];
+
+        if (!selects[0]) return;
+
+        const selectedGames = selects.map(s => s.value).filter(v => v !== "");
+        const t = function (key) {
+            return (window.OTI18n && typeof window.OTI18n.t === 'function') ? window.OTI18n.t(key) : key;
+        };
+        const placeholders = { game1: t('events.pick1'), game2: t('events.pick2'), game3: t('events.pick3') };
+
+        selects.forEach(select => {
+            select.querySelectorAll('option').forEach(option => {
+                if (option.value === "") return;
+
+                if (selectedGames.includes(option.value) && select.value !== option.value) {
+                    option.disabled = true;
+                    option.style.color = "#555555";
+                } else {
+                    option.disabled = false;
+                    option.style.color = "";
+                }
+            });
+
+            const slot = select.closest('.vote-slot');
+            if (!slot) return;
+            const picked = select.value;
+            slot.classList.toggle('filled', !!picked);
+
+            const nameEl = slot.querySelector('.vote-pick-name');
+            if (nameEl) nameEl.textContent = picked || placeholders[select.name] || 'Pick a game';
+
+            const art = slot.querySelector('.vote-art img');
+            if (!art) return;
+            const opt = select.selectedOptions[0];
+            const appid = (opt && opt.getAttribute('data-appid')) || 'non';
+            const hasArt = !!(picked && appid && appid !== 'non');
+            slot.classList.toggle('has-art', hasArt);
+            art.setAttribute('data-appid', appid);
+            art.setAttribute('data-name', picked || '');
+            art.setAttribute('data-steam-step', '0');
+            art.onerror = function () { steamImgFallback(art); };
+            if (hasArt) {
+                art.src = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/' + appid + '/header.jpg';
+            } else {
+                art.removeAttribute('src');
+            }
+        });
+    }
+
+    const voteSelects = document.querySelectorAll('select[name^="game"]');
+    if (voteSelects.length > 0) {
+        voteSelects.forEach(select => select.addEventListener('change', updateVoteDropdowns));
+        updateVoteDropdowns();
+        document.addEventListener('ot-lang-change', updateVoteDropdowns);
+    }
+</script>
+{% endblock %}

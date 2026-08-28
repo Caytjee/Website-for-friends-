@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .eg-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: #7ad7ff; opacity: 0.9; margin: 0 0 6px;
+    }
+    .eg-hero {
+        position: relative; overflow: hidden; border-radius: 18px; padding: 28px 24px 24px;
+        margin-bottom: 22px; text-align: left;
+        background:
+            radial-gradient(ellipse at 10% 0%, rgba(122,215,255,0.22), transparent 50%),
+            radial-gradient(ellipse at 90% 80%, rgba(255,215,0,0.14), transparent 42%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 90%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, #7ad7ff 40%, transparent);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 16px 40px rgba(0,0,0,0.35);
+    }
+    .eg-hero h1 { margin: 0 0 8px; color: #7ad7ff; text-shadow: 0 0 20px rgba(122,215,255,0.45); }
+    .eg-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;
+        margin-bottom: 22px;
+    }
+    .eg-card {
+        text-align: left; position: relative; overflow: hidden;
+        padding: 20px 18px 18px;
+    }
+    .eg-card::before {
+        content: ''; position: absolute; inset: 0 auto auto; height: 3px; width: 100%;
+        background: linear-gradient(90deg, var(--eg-line, #7ad7ff), transparent);
+    }
+    .eg-stat {
+        font-size: 1.7em; font-weight: 900; font-family: 'Courier New', Courier, monospace;
+        margin: 8px 0 12px; color: #FFD700;
+    }
+    .eg-log {
+        min-height: 44px; margin: 0 0 12px; font-weight: 700; opacity: 0.85;
+    }
+    .eg-rare { color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.45); }
+    .eg-fine { color: #7ad7ff; }
+    .eg-board {
+        width: 100%; border-collapse: collapse; margin-top: 8px;
+    }
+    .eg-board th, .eg-board td {
+        text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .eg-board th { font-size: 0.72em; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.65; }
+    .eg-user { display: flex; align-items: center; gap: 10px; font-weight: 800; }
+    .eg-user img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); }
+    .eg-me { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+</style>
+
+<div class="eg-hero box">
+    <p class="eg-kicker">Saturday Protocol</p>
+    <h1>Endgame</h1>
+    <p class="muted" style="margin:0; max-width: 62ch;">Welkin for Daily Ore, four artifact runs a day, then climb the spiral on Battle Pass XP.</p>
+</div>
+
+<div class="eg-grid">
+    <div class="box eg-card" style="--eg-line:#7ad7ff;">
+        <p class="eg-kicker">Welkin</p>
+        <h2 style="margin:0 0 6px;">Blessing of the Moon</h2>
+        <p class="muted" style="margin:0 0 8px;">{{ welkin_cost }} OC · +{{ welkin_instant }} OC now · +{{ welkin_daily }} OC on Daily for 30 days. Stacks.</p>
+        <div class="eg-stat" id="eg-welkin-stat">{% if welkin_active %}{{ welkin_days }} days left{% else %}Inactive{% endif %}</div>
+        <button type="button" id="eg-welkin-btn" onclick="buyWelkin()" style="width:100%; font-weight:900; background:linear-gradient(90deg,#7ad7ff,#5865F2); color:#111;">
+            {% if welkin_active %}Extend Welkin{% else %}Buy Welkin{% endif %}
+        </button>
+    </div>
+
+    <div class="box eg-card" style="--eg-line:#FFD700;">
+        <p class="eg-kicker">Artifact farming</p>
+        <h2 style="margin:0 0 6px;">Domain of Ore</h2>
+        <p class="muted" style="margin:0 0 8px;">{{ farm_max }} free runs per day. Drops OC and a little Protocol XP.</p>
+        <div class="eg-stat" id="eg-farm-stat">{{ farm_left }} / {{ farm_max }} resin</div>
+        <p class="eg-log" id="eg-farm-log">Enter the domain.</p>
+        <button type="button" id="eg-farm-btn" onclick="farmArtifact()" {% if farm_left < 1 %}disabled{% endif %} style="width:100%; font-weight:900; background:#FFD700; color:#111;{% if farm_left < 1 %} opacity:0.55; cursor:not-allowed;{% endif %}">
+            Farm artifacts
+        </button>
+    </div>
+
+    <div class="box eg-card" style="--eg-line:#ff4c4c;">
+        <p class="eg-kicker">Spiral</p>
+        <h2 style="margin:0 0 6px;">Your chamber</h2>
+        <p class="muted" style="margin:0 0 8px;">Rank comes from Saturday Protocol level. Push the Battle Pass to climb.</p>
+        <div class="eg-stat">Floor {{ chamber.label }}</div>
+        <p class="muted" style="margin:0;">Level {{ season.level }}{% if not season.maxed %} · {{ season.xp_into_level }}/{{ season.xp_for_level }} XP{% else %} · MAX{% endif %}</p>
+        <a href="/pass" style="display:block; margin-top:14px; text-align:center; font-weight:900; padding:10px 12px; border-radius:10px; background:#ff4c4c; color:#fff; text-decoration:none;">Open Battle Pass</a>
+    </div>
+</div>
+
+<div class="box" style="text-align:left;">
+    <p class="eg-kicker">Endgame board</p>
+    <h2 style="margin:0 0 4px;">Spiral ranking</h2>
+    <table class="eg-board">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Operator</th>
+                <th>Chamber</th>
+                <th>Lv</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in board %}
+            <tr{% if session.get('username') == row.username %} class="eg-me"{% endif %}>
+                <td>{{ loop.index }}</td>
+                <td>
+                    <div class="eg-user">
+                        <img src="{{ row.avatar }}" alt="">
+                        <span>{{ row.username }}</span>
+                    </div>
+                </td>
+                <td>{{ row.chamber }}</td>
+                <td>{{ row.level }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="muted">No operators on the spiral yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function setEgBalance(n) {
+    document.querySelectorAll('.js-oc-balance').forEach(function (el) { el.innerText = n; });
+}
+function buyWelkin() {
+    var btn = document.getElementById('eg-welkin-btn');
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    fetch('/api/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item: 'welkin' })
+    })
+    .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+    .then(function (res) {
+        if (!res.ok || !res.data.success) {
+            btn.disabled = false;
+            oreAlert(res.data.error || 'Purchase failed');
+            return;
+        }
+        setEgBalance(res.data.new_balance);
+        document.getElementById('eg-welkin-stat').innerText = (res.data.welkin_days || 0) + ' days left';
+        btn.innerText = 'Extend Welkin';
+        btn.disabled = false;
+        if (typeof confetti === 'function') confetti({ particleCount: 120, spread: 70, origin: { y: 0.7 }, zIndex: 999999 });
+    })
+    .catch(function () {
+        btn.disabled = false;
+        oreAlert('Shop unreachable');
+    });
+}
+function farmArtifact() {
+    var btn = document.getElementById('eg-farm-btn');
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    fetch('/api/endgame/farm', { method: 'POST', credentials: 'same-origin' })
+    .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+    .then(function (res) {
+        if (!res.ok || !res.data.success) {
+            btn.disabled = false;
+            oreAlert(res.data.error || 'Domain locked');
+            return;
+        }
+        var drop = res.data.drop || {};
+        var log = document.getElementById('eg-farm-log');
+        log.className = 'eg-log eg-' + (drop.rarity || 'common');
+        log.innerText = (drop.name || 'Drop') + ' · +' + (drop.oc || 0) + ' OC';
+        document.getElementById('eg-farm-stat').innerText = (res.data.left || 0) + ' / ' + (res.data.max || 4) + ' resin';
+        setEgBalance(res.data.new_balance);
+        if (res.data.left < 1) {
+            btn.style.opacity = '0.55';
+            btn.style.cursor = 'not-allowed';
+        } else {
+            btn.disabled = false;
+        }
+        if (drop.rarity === 'rare' && typeof confetti === 'function') {
+            confetti({ particleCount: 160, spread: 80, origin: { y: 0.7 }, zIndex: 999999 });
+        }
+    })
+    .catch(function () {
+        btn.disabled = false;
+        oreAlert('Domain unreachable');
+    });
+}
+</script>
+{% endblock %}

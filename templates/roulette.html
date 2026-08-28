@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .rl-stage { position: relative; overflow: hidden; min-height: 62vh; }
+    .rl-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: var(--accent); opacity: 0.85; margin: 0 0 6px;
+    }
+    .rl-floor {
+        position: relative; border-radius: 20px; padding: 28px 18px 36px;
+        background:
+            radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 55%),
+            radial-gradient(ellipse at 50% 120%, rgba(0,0,0,0.55), transparent 50%),
+            var(--bg-box);
+        border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+        box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+        overflow: hidden;
+    }
+    .rl-floor.spinning .rl-name { filter: blur(3px); transform: scale(1.04); letter-spacing: 0.08em; }
+    #roulette-result {
+        display: none; margin-top: 28px; position: relative; overflow: hidden;
+        max-width: 720px; margin-left: auto; margin-right: auto; padding: 0;
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        text-align: left;
+    }
+    @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .rl-art {
+        display: none; width: 100%; height: 220px; object-fit: cover; filter: saturate(1.15);
+        border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .rl-art.show { display: block; animation: rl-reveal 0.45s ease-out; }
+    @keyframes rl-reveal { from { opacity: 0; filter: blur(12px) saturate(1.15); } to { opacity: 1; filter: blur(0) saturate(1.15); } }
+    .rl-body { padding: 28px 24px 32px; text-align: center; }
+    .rl-name {
+        color: var(--accent); margin: 10px 0 0; font-size: clamp(1.6em, 5vw, 2.6em);
+        word-break: break-word; transition: filter 0.08s, transform 0.08s, color 0.2s;
+        text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+    .spin-btn {
+        background: var(--accent); color: white; border: none; padding: 20px 40px;
+        font-size: 1.4em; border-radius: 12px; cursor: pointer; font-weight: 900;
+        box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 35%, transparent);
+        transition: 0.2s; margin-top: 0; letter-spacing: 0.04em;
+    }
+    .spin-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 32px color-mix(in srgb, var(--accent) 45%, transparent); background: var(--btn-hover); }
+    .spin-btn:disabled { opacity: 0.7; cursor: wait; transform: none; }
+    .rl-tick {
+        height: 4px; width: 0; margin: 18px auto 0; max-width: 280px; border-radius: 99px;
+        background: var(--accent); box-shadow: 0 0 12px var(--accent);
+        transition: width 0.08s linear;
+    }
+    @media (max-width: 640px) {
+        .rl-art { height: 150px; }
+        .spin-btn { width: 100%; padding: 16px 18px; font-size: 1.15em; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .rl-floor.spinning .rl-name, .rl-art.show { filter: none; animation: none; }
+    }
+</style>
+
+<div class="page-header">
+    <p class="rl-kicker" data-i18n="roulette.kicker">{{ t('roulette.kicker') }}</p>
+    <h1>🎲 <span data-i18n="roulette.title">{{ t('roulette.title') }}</span></h1>
+    <p class="page-sub" data-i18n="roulette.sub">{{ t('roulette.sub') }}</p>
+</div>
+
+<div class="rl-stage">
+    <div class="rl-floor" id="rl-floor">
+        <button class="spin-btn" onclick="spinWheel()" data-i18n="roulette.spin">{{ t('roulette.spin') }}</button>
+        <div class="rl-tick" id="rl-tick"></div>
+
+        <div id="roulette-result" class="box">
+            <img id="result-art" class="rl-art" alt="" data-appid="" data-name="" onerror="steamImgFallback(this)">
+            <div class="rl-body">
+                <p class="rl-kicker" data-i18n="roulette.lockIn">{{ t('roulette.lockIn') }}</p>
+                <h2 style="margin-top: 0; opacity: 0.8;" data-i18n="roulette.youPlay">{{ t('roulette.youPlay') }}</h2>
+                <h1 id="result-name" class="rl-name"></h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const games = {{ games | tojson | safe }};
+    const appids = {{ game_appids | tojson | safe }};
+
+    function tickClick() {
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            const ctx = window._otSpinAudio || (window._otSpinAudio = new AC());
+            if (ctx.state === 'suspended') ctx.resume();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'square';
+            o.frequency.value = 720 + Math.random() * 180;
+            g.gain.value = 0.035;
+            o.connect(g); g.connect(ctx.destination);
+            o.start();
+            g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+            o.stop(ctx.currentTime + 0.045);
+        } catch (e) {}
+    }
+
+    function coverFor(name) {
+        const id = appids && appids[name];
+        if (!id || id === 'non') return '';
+        return 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/' + id + '/header.jpg';
+    }
+
+    function showCover(name) {
+        const img = document.getElementById('result-art');
+        const url = coverFor(name);
+        img.classList.remove('show');
+        if (!url) {
+            img.removeAttribute('src');
+            img.setAttribute('data-appid', '');
+            return;
+        }
+        img.setAttribute('data-steam-step', '0');
+        img.setAttribute('data-appid', appids[name]);
+        img.setAttribute('data-name', name);
+        img.alt = name;
+        img.src = url;
+        img.classList.add('show');
+    }
+
+    function spinWheel() {
+        const btn = document.querySelector('.spin-btn');
+        const floor = document.getElementById('rl-floor');
+        const tickBar = document.getElementById('rl-tick');
+        if (!games || games.length === 0) {
+            document.getElementById('roulette-result').style.display = 'block';
+            document.getElementById('result-name').innerText = (window.OTI18n && OTI18n.t('roulette.noGames')) || "No games available";
+            return;
+        }
+        btn.disabled = true;
+        btn.innerText = (window.OTI18n && OTI18n.t('roulette.spinning')) || "SPINNING...";
+        floor.classList.add('spinning');
+
+        let times = 0;
+        const maxTimes = 28;
+        const resultDiv = document.getElementById('roulette-result');
+        const resultName = document.getElementById('result-name');
+        resultDiv.style.display = 'block';
+        document.getElementById('result-art').classList.remove('show');
+        let locked = games[Math.floor(Math.random() * games.length)];
+        fetch('/api/roulette/spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) { if (data && data.game) locked = data.game; })
+            .catch(function () {});
+
+        function tick() {
+            const pick = times >= maxTimes ? locked : games[Math.floor(Math.random() * games.length)];
+            resultName.innerText = pick;
+            resultName.style.color = "#ffffff";
+            tickClick();
+            times++;
+            tickBar.style.width = Math.min(100, (times / maxTimes) * 100) + '%';
+
+            if (times > maxTimes) {
+                floor.classList.remove('spinning');
+                btn.disabled = false;
+                btn.innerText = (window.OTI18n && OTI18n.t('roulette.spinAgain')) || "SPIN AGAIN!";
+                resultName.style.color = "var(--accent)";
+                resultName.innerText = locked;
+                showCover(locked);
+                if (typeof confetti === "function") {
+                    confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+                }
+                return;
+            }
+            const delay = 45 + times * times * 1.15;
+            setTimeout(tick, delay);
+        }
+        tick();
+    }
+</script>
+{% endblock %}

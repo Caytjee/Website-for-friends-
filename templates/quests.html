@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .bq-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: #e8c547; opacity: 0.9; margin: 0 0 6px;
+    }
+    .bq-hero {
+        position: relative; overflow: hidden; border-radius: 18px; padding: 28px 24px 24px;
+        margin-bottom: 22px; text-align: left;
+        background:
+            radial-gradient(ellipse at 16% 0%, rgba(232,197,71,0.22), transparent 52%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 90%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, #e8c547 40%, transparent);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 16px 40px rgba(0,0,0,0.35);
+    }
+    .bq-hero h1 { margin: 0 0 8px; color: #e8c547; text-shadow: 0 0 18px rgba(232,197,71,0.4); }
+
+    .bq-progress {
+        max-width: 720px; margin: 0 auto 22px; text-align: left;
+        background:
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 92%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, #e8c547 32%, transparent);
+        box-shadow: 0 16px 36px rgba(0,0,0,0.35);
+        position: relative;
+    }
+    .bq-progress::before {
+        content: ''; position: absolute; inset: 0 0 auto; height: 3px;
+        background: #e8c547; box-shadow: 0 0 16px #e8c547;
+    }
+    .bq-progress-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+
+    .bq-board {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px;
+    }
+    .bq-contract {
+        margin: 0; text-align: left; position: relative; overflow: hidden;
+        background:
+            linear-gradient(180deg, rgba(42,32,12,0.55), color-mix(in srgb, var(--bg-box) 88%, #000));
+        border: 1px solid color-mix(in srgb, #e8c547 28%, transparent);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+        border-left: 4px solid var(--accent);
+    }
+    .bq-contract.done {
+        border-left-color: #3fb950;
+        box-shadow: inset 0 0 40px rgba(63,185,80,0.08), 0 10px 24px rgba(0,0,0,0.3);
+    }
+    .bq-stamp {
+        position: absolute; top: 14px; right: 14px;
+        width: 64px; height: 64px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.62em; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase;
+        transform: rotate(12deg);
+        border: 2px solid currentColor; opacity: 0.85;
+        pointer-events: none;
+    }
+    .bq-contract.done .bq-stamp { color: #3fb950; }
+    .bq-contract:not(.done) .bq-stamp { color: #e8c547; }
+    .bq-count { font-size: 1.4em; }
+
+    .bq-crate {
+        max-width: 520px; margin: 28px auto 0; text-align: center; position: relative; overflow: hidden;
+        background:
+            radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.16), transparent 55%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg-box) 92%, #000), var(--bg-box));
+        border: 1px solid color-mix(in srgb, #FFD700 40%, transparent);
+        box-shadow: 0 0 28px rgba(255,215,0,0.12), 0 16px 36px rgba(0,0,0,0.35);
+    }
+    .bq-crate::before {
+        content: ''; position: absolute; inset: 0 0 auto; height: 3px;
+        background: linear-gradient(90deg, transparent, #FFD700, transparent);
+    }
+    .bq-crate .btn-full {
+        background: linear-gradient(90deg,#FFD700,#ff6a00); color:#111; font-weight: 900;
+        letter-spacing: 0.06em; text-transform: uppercase;
+    }
+</style>
+
+<div class="bq-hero">
+    <div class="page-header" style="margin: 0;">
+        <p class="bq-kicker" data-i18n="quests.kicker" data-i18n-vars='{{ {"week": progress.week_id} | tojson }}'>{{ t('quests.kicker', week=progress.week_id) }}</p>
+        <h1>🎯 <span data-i18n="quests.title">{{ t('quests.title') }}</span></h1>
+        <p class="page-sub" data-i18n="quests.sub" data-i18n-vars='{{ {"week": progress.week_id, "min": bounty_min, "max": bounty_max} | tojson }}'>{{ t('quests.sub', week=progress.week_id, min=bounty_min, max=bounty_max) }}</p>
+    </div>
+</div>
+
+<div class="box bq-progress">
+    <p class="bq-kicker" data-i18n="quests.clearance">{{ t('quests.clearance') }}</p>
+    <div class="bq-progress-head">
+        <h2 style="margin:0;" data-i18n="quests.progress" data-i18n-vars='{{ {"done": progress.done_count, "total": progress.total} | tojson }}'>{{ t('quests.progress', done=progress.done_count, total=progress.total) }}</h2>
+        <span class="muted" style="font-weight:800;" data-i18n="quests.complete" data-i18n-vars='{{ {"done": progress.done_count} | tojson }}'>{{ t('quests.complete', done=progress.done_count) }}</span>
+    </div>
+    <div class="pc-xp-bar" style="margin-top:12px;"><div class="pc-xp-fill" style="width: {{ (progress.done_count / progress.total * 100) | int }}%;"></div></div>
+</div>
+
+<div class="bq-board">
+    {% for task in progress.tasks %}
+    <div class="box bq-contract{% if task.done %} done{% endif %}" style="border-left:4px solid {% if task.done %}#3fb950{% else %}var(--accent){% endif %};">
+        <div class="bq-stamp">{% if task.done %}<span data-i18n="quests.sealed">{{ t('quests.sealed') }}</span>{% else %}<span data-i18n="quests.open">{{ t('quests.open') }}</span>{% endif %}</div>
+        <div class="muted" style="font-size:0.75em; letter-spacing:0.12em; text-transform:uppercase; font-weight:800;" data-i18n="quests.contract" data-i18n-vars='{{ {"n": loop.index} | tojson }}'>{{ t('quests.contract', n=loop.index) }}</div>
+        <h3 style="margin:6px 0 8px; padding-right: 72px;" data-i18n="quests.{{ task.key }}Label">{{ t('quests.' + task.key + 'Label') }}</h3>
+        <p class="muted" style="margin:0 0 12px;" data-i18n="quests.{{ task.key }}Hint">{{ t('quests.' + task.key + 'Hint') }}</p>
+        <strong class="bq-count">{% if task.done %}1/1 ✅{% else %}0/1{% endif %}</strong>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="box bq-crate">
+    <p class="bq-kicker" data-i18n="quests.sealedVault">{{ t('quests.sealedVault') }}</p>
+    <h2 style="margin-top:0;">📦 <span data-i18n="quests.crate">{{ t('quests.crate') }}</span></h2>
+    {% if progress.claimed %}
+        <p><span data-i18n="quests.alreadyLooted">{{ t('quests.alreadyLooted') }}</span> <strong style="color:#FFD700;">+{{ progress.claimed_reward }} OC</strong></p>
+        <button disabled data-i18n="pass.claimed">{{ t('pass.claimed') }}</button>
+    {% elif progress.complete %}
+        <form method="POST">
+            <button type="submit" class="btn-full" data-i18n="quests.claimCrate">{{ t('quests.claimCrate') }}</button>
+        </form>
+    {% else %}
+        <p class="muted" data-i18n="quests.locked">{{ t('quests.locked') }}</p>
+        <button disabled data-i18n="quests.needMore" data-i18n-vars='{{ {"n": progress.total - progress.done_count} | tojson }}'>{{ t('quests.needMore', n=progress.total - progress.done_count) }}</button>
+    {% endif %}
+</div>
+{% endblock %}

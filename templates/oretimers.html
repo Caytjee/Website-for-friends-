@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .hof-kicker {
+        font-size: 0.68em; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 800;
+        color: #ffd700; opacity: 0.9; margin: 0 0 6px;
+    }
+    .trophy-case {
+        position: relative; overflow: hidden; border-radius: 18px;
+        padding: 56px 16px 28px; margin-bottom: 8px;
+        background:
+            linear-gradient(180deg, rgba(255,215,0,0.12) 0%, transparent 38%),
+            radial-gradient(ellipse at 50% -10%, rgba(255,255,255,0.12), transparent 50%),
+            var(--bg-box);
+        border: 1px solid rgba(255,215,0,0.38);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 20px 50px rgba(0,0,0,0.4);
+    }
+    .trophy-case::after {
+        content: ''; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%);
+        z-index: 4;
+    }
+    .tab-container { display: flex; justify-content: center; gap: 10px; margin-bottom: 40px; flex-wrap: wrap; }
+    .podium { display: flex; justify-content: center; align-items: flex-end; gap: 14px; margin-top: 60px; margin-bottom: 12px; flex-wrap: wrap; }
+    .podium-step { background: var(--bg-box); border-radius: 14px 14px 0 0; display: flex; flex-direction: column; align-items: center; padding: 20px 10px 12px; box-shadow: 0 -4px 15px rgba(0,0,0,0.3); width: 138px; text-align: center; position: relative; }
+    .podium-avatar { width: 65px; height: 65px; border-radius: 50%; border: 3px solid var(--accent); margin-bottom: 10px; object-fit: cover; background: #1e1e1e; cursor: pointer; transition: transform 0.2s; }
+    .podium-avatar:hover { transform: scale(1.1); }
+
+    .step-1 { height: 220px; border: 2px solid #ffd700; border-bottom: none; background: linear-gradient(180deg, rgba(255,215,0,0.15) 0%, var(--bg-box) 100%); z-index: 3; box-shadow: 0 -10px 25px rgba(255,215,0,0.2); }
+    .step-2 { height: 170px; border: 2px solid #c0c0c0; border-bottom: none; background: linear-gradient(180deg, rgba(192,192,192,0.1) 0%, var(--bg-box) 100%); z-index: 2; }
+    .step-3 { height: 140px; border: 2px solid #cd7f32; border-bottom: none; background: linear-gradient(180deg, rgba(205,127,50,0.1) 0%, var(--bg-box) 100%); z-index: 1; }
+
+    .user-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .user-card { background: var(--bg-box); padding: 18px; border-radius: var(--radius); display: flex; align-items: center; gap: 15px; transition: 0.3s; border: var(--border); box-shadow: var(--shadow); }
+    .user-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--accent);
+        box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 42%, transparent), 0 10px 24px rgba(0,0,0,0.4);
+    }
+    .member-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 168px;
+        padding: 52px 20px 22px;
+        align-items: center;
+        gap: 16px;
+        border: 1px solid rgba(255,255,255,0.12);
+    }
+    .member-banner {
+        position: absolute; inset: 0;
+        overflow: hidden;
+        z-index: 0;
+    }
+    .member-scrim {
+        position: absolute; inset: 0; z-index: 1;
+        background: linear-gradient(180deg, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.72) 100%);
+    }
+    .member-card.text-dark .member-scrim {
+        background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.78) 100%);
+    }
+    .member-body {
+        position: relative; z-index: 2;
+        display: flex; align-items: center; gap: 16px;
+        min-width: 0; width: 100%;
+    }
+    .member-card.text-light, .member-card.text-light .member-name { color: #f6f7fb; }
+    .member-card.text-dark, .member-card.text-dark .member-name { color: #121212; }
+    .member-card.text-light .member-votes { color: rgba(255,255,255,0.78); }
+    .member-card.text-dark .member-votes { color: rgba(0,0,0,0.62); }
+    .member-name {
+        font-size: 1.22em; font-weight: 900; cursor: pointer; word-break: break-word;
+        text-shadow: 0 1px 8px rgba(0,0,0,0.35);
+    }
+    .member-card.text-dark .member-name { text-shadow: 0 1px 8px rgba(255,255,255,0.35); }
+    .member-avatar {
+        width: 78px; height: 78px; border-radius: 50%; object-fit: cover; cursor: pointer;
+        flex-shrink: 0; background: #1e1e1e;
+    }
+    .badge-icon { font-size: 1.2em; cursor: help; }
+    .member-wordmark {
+        position: absolute; left: 0; right: 0; top: 4px; height: 40px;
+        z-index: 2; pointer-events: none;
+    }
+    .member-wordmark .banner-text-base {
+        height: 100%;
+    }
+    .member-wordmark span {
+        font-size: 1.02em !important;
+        letter-spacing: 0.12em !important;
+    }
+
+    @media (max-width: 600px) {
+        .podium { align-items: stretch; }
+        .podium-step { width: 100%; max-width: 280px; border-radius: 14px; height: auto !important; min-height: 140px; border-bottom: 2px solid; }
+        .step-1 { border-color: #ffd700; }
+        .step-2 { border-color: #c0c0c0; }
+        .step-3 { border-color: #cd7f32; }
+    }
+</style>
+
+<div class="page-header">
+    <p class="hof-kicker" data-i18n="oretimers.kicker">{{ t('oretimers.kicker') }}</p>
+    <h1>🌟 <span data-i18n="oretimers.title">{{ t('oretimers.title') }}</span></h1>
+    <p class="page-sub" data-i18n="oretimers.sub">{{ t('oretimers.sub') }}</p>
+</div>
+
+<div class="tab-container">
+    <button class="tab-btn active" onclick="openTab('tab-hall', this)">🏆 <span data-i18n="oretimers.hof">{{ t('oretimers.hof') }}</span></button>
+    <button class="tab-btn" onclick="openTab('tab-all', this)">👥 <span data-i18n="oretimers.allMembers">{{ t('oretimers.allMembers') }}</span></button>
+</div>
+
+{% set sorted_users = users | sort(attribute='vote_count', reverse=true) %}
+
+<div id="tab-hall" class="tab-content active">
+    <div class="trophy-case">
+        <p class="hof-kicker" style="text-align:center;" data-i18n="oretimers.spotlights">{{ t('oretimers.spotlights') }}</p>
+        <div class="podium">
+            {% if sorted_users|length > 1 %}
+            <div class="podium-step step-2">
+                <div style="position: absolute; top: -25px; font-size: 2.2em; text-shadow: 0 0 10px rgba(192,192,192,0.5);">🥈</div>
+                <span class="player-card {{ border_wrap_class(sorted_users[1].active_border) }}" data-player-username="{{ sorted_users[1].username }}" data-player-steam="{{ sorted_users[1].steam_id or '' }}" data-active-border="{{ sorted_users[1].active_border or '' }}" data-default-border="3px solid #c0c0c0">
+                    <img src="{{ sorted_users[1].avatar or default_avatar }}" class="podium-avatar {{ border_img_class(sorted_users[1].active_border) }}" style="border-color: #c0c0c0;{% if border_wrap_class(sorted_users[1].active_border) %}border:none;{% endif %}" onclick='openPlayerCard({{ sorted_users[1].username | tojson }})'>
+                </span>
+                <strong onclick='openPlayerCard({{ sorted_users[1].username | tojson }})' style="color: #c0c0c0; word-break: break-all; cursor: pointer; transition: 0.2s;" onmouseover="this.style.filter='brightness(1.5)'" onmouseout="this.style.filter='none'">{{ sorted_users[1].username }}</strong>
+                <span style="font-size: 0.9em; margin-top: 5px; opacity: 0.8;">{{ sorted_users[1].vote_count }} <span data-i18n="common.votes">{{ t('common.votes') }}</span></span>
+            </div>
+            {% endif %}
+
+            {% if sorted_users|length > 0 %}
+            <div class="podium-step step-1">
+                <div style="position: absolute; top: -35px; font-size: 3em; text-shadow: 0 0 15px rgba(255,215,0,0.8);">👑</div>
+                <span class="player-card {{ border_wrap_class(sorted_users[0].active_border) }}" data-player-username="{{ sorted_users[0].username }}" data-player-steam="{{ sorted_users[0].steam_id or '' }}" data-active-border="{{ sorted_users[0].active_border or '' }}" data-default-border="3px solid #ffd700">
+                    <img src="{{ sorted_users[0].avatar or default_avatar }}" class="podium-avatar {{ border_img_class(sorted_users[0].active_border) }}" style="border-color: #ffd700; width: 80px; height: 80px;{% if border_wrap_class(sorted_users[0].active_border) %}border:none;{% endif %}" onclick='openPlayerCard({{ sorted_users[0].username | tojson }})'>
+                </span>
+                <strong onclick='openPlayerCard({{ sorted_users[0].username | tojson }})' style="color: #ffd700; word-break: break-all; font-size: 1.2em; cursor: pointer; transition: 0.2s;" onmouseover="this.style.filter='brightness(1.5)'" onmouseout="this.style.filter='none'">{{ sorted_users[0].username }}</strong>
+                <span style="font-size: 1.1em; font-weight: bold; margin-top: 5px;">{{ sorted_users[0].vote_count }} <span data-i18n="common.votes">{{ t('common.votes') }}</span></span>
+            </div>
+            {% endif %}
+
+            {% if sorted_users|length > 2 %}
+            <div class="podium-step step-3">
+                <div style="position: absolute; top: -20px; font-size: 1.8em; text-shadow: 0 0 10px rgba(205,127,50,0.5);">🥉</div>
+                <span class="player-card {{ border_wrap_class(sorted_users[2].active_border) }}" data-player-username="{{ sorted_users[2].username }}" data-player-steam="{{ sorted_users[2].steam_id or '' }}" data-active-border="{{ sorted_users[2].active_border or '' }}" data-default-border="3px solid #cd7f32">
+                    <img src="{{ sorted_users[2].avatar or default_avatar }}" class="podium-avatar {{ border_img_class(sorted_users[2].active_border) }}" style="border-color: #cd7f32;{% if border_wrap_class(sorted_users[2].active_border) %}border:none;{% endif %}" onclick='openPlayerCard({{ sorted_users[2].username | tojson }})'>
+                </span>
+                <strong onclick='openPlayerCard({{ sorted_users[2].username | tojson }})' style="color: #cd7f32; word-break: break-all; cursor: pointer; transition: 0.2s;" onmouseover="this.style.filter='brightness(1.5)'" onmouseout="this.style.filter='none'">{{ sorted_users[2].username }}</strong>
+                <span style="font-size: 0.9em; margin-top: 5px; opacity: 0.8;">{{ sorted_users[2].vote_count }} <span data-i18n="common.votes">{{ t('common.votes') }}</span></span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div id="tab-all" class="tab-content">
+    <div class="user-grid">
+        {% for u in users %}
+        {% set look = u.banner_look or {'css_class': '', 'bg_style': 'background:#1a1a1a;', 'text_mode': 'light', 'text_class': 'banner-standard-text', 'text_style': '', 'overlay_text': 'OreTime'} %}
+        <div class="user-card member-card text-{{ look.text_mode }}">
+            <div class="member-banner banner-container {{ look.css_class }}" style="{{ look.bg_style }}" aria-hidden="true"></div>
+            <div class="member-scrim" aria-hidden="true"></div>
+            <div class="member-wordmark" aria-hidden="true">
+                <span class="banner-text-base {{ look.text_class }}"{% if look.text_style %} style="{{ look.text_style }}"{% endif %}>{{ look.overlay_text or 'OreTime' }}</span>
+            </div>
+            <div class="member-body">
+                <span class="player-card {{ border_wrap_class(u.active_border) }}" data-player-username="{{ u.username }}" data-player-steam="{{ u.steam_id or '' }}" data-active-border="{{ u.active_border or '' }}" data-default-border="3px solid var(--accent)">
+                    <img src="{{ u.avatar or default_avatar }}" class="member-avatar {{ border_img_class(u.active_border) }}" style="border: 3px solid var(--accent);{% if border_wrap_class(u.active_border) %}border:none;{% endif %}" onclick='openPlayerCard({{ u.username | tojson }})'>
+                </span>
+                <div style="text-align: left; min-width: 0;">
+                    <strong class="member-name" onclick='openPlayerCard({{ u.username | tojson }})'>{{ u.username }}</strong>
+                    <div class="member-votes" data-i18n="oretimers.votesOnRecord" data-i18n-vars='{{ {"n": u.vote_count} | tojson }}'>{{ t('oretimers.votesOnRecord', n=u.vote_count) }}</div>
+                    <div style="margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap;">
+                        {% for badge in u.badges %}
+                            <span class="badge-icon" data-tooltip="{{ badge.title }}">{{ badge.icon }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    function openTab(tabId, btnElement) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        const tab = document.getElementById(tabId);
+        if (tab) tab.classList.add('active');
+        if (btnElement) btnElement.classList.add('active');
+    }
+</script>
+
+{% endblock %}
